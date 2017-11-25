@@ -1,6 +1,11 @@
 #include "m_pd.h"
 #include "net_monome.h"
 #include "lo/lo.h"
+typedef struct _grid {
+  t_object  x_obj;
+  op_monome_t monome;
+  t_outlet *button_out;
+} t_grid;
 
 static lo_server monome_server;
 static void monome_server_error(int num, const char *m, const char *path);
@@ -14,11 +19,6 @@ static t_class *grid_class;
 
 t_clock *grid_clock;
 
-typedef struct _grid {  
-  t_object  x_obj;
-  op_monome_t monome;
-  t_outlet *button_out;
-} t_grid;
 
 void grid_led(t_grid *op, t_floatarg x, t_floatarg y, t_floatarg z)  {
   int z_16 = (int) z;
@@ -98,7 +98,6 @@ void net_monome_set_focus(op_monome_t* op_monome, u8 focus) {
   }
 }
 
-
 void raw_button_handler(void* op, u8 x, u8 y, u8 z) {
   t_grid *grid_op = (t_grid *) op;
   t_atom but[3];
@@ -172,4 +171,15 @@ int monome_key_handler(const char *path, const char *types, lo_arg ** argv,
 			      (u8) argv[2]->i);
   }
   return 1;
+}
+u8 monome_size_x () {
+  // FIXME for now we only are compatible with 128 grid
+  return 16;
+}
+u8 monome_size_y () {
+  // FIXME for now we only are compatible with 128 grid
+  return 8;
+}
+u8 monome_xy_idx(u8 x, u8 y) {
+  return 16 * y + x;
 }
