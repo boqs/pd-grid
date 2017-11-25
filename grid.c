@@ -13,7 +13,6 @@ static int monome_key_handler(const char *path, const char *types, lo_arg ** arg
 			      int argc, void *data, void *user_data);
 static void monome_send_quadrant (int x, int y, int *testdata);
 static void monome_update_128_grid ();
-static void serial_osc_grab_focus(void);
  
 static t_class *grid_class;
 
@@ -47,16 +46,6 @@ void grid_focus(t_grid *op)  {
 void grid_unfocus(t_grid *op) {
   net_monome_set_focus(&(op->monome), 0);
   serial_osc_grab_focus();
-}
-
-void serial_osc_grab_focus(void) {
-  lo_address a = lo_address_new(NULL, "13188");
-  lo_send(a, "/sys/port", "i", 6001);
-}
-
-void add_focus_methods (t_class *c) {
-  class_addmethod(c, (t_method)grid_unfocus, gensym("unfocus"), A_DEFFLOAT, 0);
-  class_addmethod(c, (t_method)grid_focus, gensym("focus"), 0);
 }
 
 void monome_update_128_grid () {
@@ -131,7 +120,8 @@ void grid_setup(void) {
 			    0, sizeof(t_grid),  
 			    CLASS_DEFAULT,  
 			    A_GIMME, 0);  
-  add_focus_methods( grid_class);
+  class_addmethod(grid_class, (t_method)grid_unfocus, gensym("unfocus"), A_DEFFLOAT, 0);
+  class_addmethod(grid_class, (t_method)grid_focus, gensym("focus"), 0);
   class_addmethod(grid_class,  
 		  (t_method)grid_led, gensym("led"),  
 		  A_DEFFLOAT, A_DEFFLOAT, A_DEFFLOAT, 0);  
@@ -171,15 +161,4 @@ int monome_key_handler(const char *path, const char *types, lo_arg ** argv,
 			      (u8) argv[2]->i);
   }
   return 1;
-}
-u8 monome_size_x () {
-  // FIXME for now we only are compatible with 128 grid
-  return 16;
-}
-u8 monome_size_y () {
-  // FIXME for now we only are compatible with 128 grid
-  return 8;
-}
-u8 monome_xy_idx(u8 x, u8 y) {
-  return 16 * y + x;
 }
