@@ -7,8 +7,7 @@
 
 //--- op_step : monome grid as a step sequencer
 typedef struct op_step_struct {
-  t_object x_obj;
-  op_monome_t monome;
+  t_monome monome;
   // inputs: size, step
   volatile io_t size, step;
   // outputs: a,b,c,d

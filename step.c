@@ -1,22 +1,13 @@
 #include "step.h"
 
-static void op_step_handler(op_step_t* op, u8 x, u8 y, u8 z);
-
+static void op_step_handler(op_step_t *op, u8 x, u8 y, u8 z);
 static void op_step_in_step(op_step_t* op, float v);
 static void op_step_in_size(op_step_t* op, float v);
-void op_step_focus(op_step_t *op)  {
-  net_monome_set_focus(&(op->monome), 1);
-  serial_osc_grab_focus();
-}
-
-void op_step_unfocus(op_step_t *op) {
-  net_monome_set_focus(&(op->monome), 0);
-  serial_osc_grab_focus();
-}
 
 static t_class *op_step_class;
 void *step_new(t_symbol *s, int argc, t_atom *argv);
 void step_setup (void) {
+  net_monome_setup();
   op_step_class = class_new(gensym("step"),
 			    (t_newmethod)step_new,
 			    0, sizeof(op_step_t),
@@ -26,8 +17,7 @@ void step_setup (void) {
 		  (t_method)op_step_in_step, gensym("step"), A_DEFFLOAT, 0);
   class_addmethod(op_step_class,
 		  (t_method)op_step_in_size, gensym("size"), A_DEFFLOAT, 0);
-  class_addmethod(op_step_class, (t_method)op_step_unfocus, gensym("unfocus"), A_DEFFLOAT, 0);
-  class_addmethod(op_step_class, (t_method)op_step_focus, gensym("focus"), 0);
+  monome_add_focus_methods(op_step_class);
 }
 
 //----- extern function definition
@@ -39,20 +29,20 @@ void *step_new(t_symbol *s, int argc, t_atom *argv) {
   u8 i;
   op_step_t *op = (op_step_t *)pd_new(op_step_class);
 
-  op->a = outlet_new(&op->x_obj, &s_float);
-  op->b = outlet_new(&op->x_obj, &s_float);
-  op->c = outlet_new(&op->x_obj, &s_float);
-  op->d = outlet_new(&op->x_obj, &s_float);
-  op->mono1 = outlet_new(&op->x_obj, &s_float);
-  op->pos1 = outlet_new(&op->x_obj, &s_float);
-  op->mono2 = outlet_new(&op->x_obj, &s_float);
-  op->pos2 = outlet_new(&op->x_obj, &s_float);
+  op->a = outlet_new((t_object *) op, &s_float);
+  op->b = outlet_new((t_object *) op, &s_float);
+  op->c = outlet_new((t_object *) op, &s_float);
+  op->d = outlet_new((t_object *) op, &s_float);
+  op->mono1 = outlet_new((t_object *) op, &s_float);
+  op->pos1 = outlet_new((t_object *) op, &s_float);
+  op->mono2 = outlet_new((t_object *) op, &s_float);
+  op->pos2 = outlet_new((t_object *) op, &s_float);
 
   /* op->super.pickle = (op_pickle_fn) (&op_step_pickle); */
   /* op->super.unpickle = (op_unpickle_fn) (&op_step_unpickle); */
 
   //--- monome
-  net_monome_init(&op->monome, op, (monome_handler_t)op_step_handler);
+  net_monome_init(&op->monome, (monome_handler_t)op_step_handler);
 
   // superclass state
 
@@ -166,8 +156,8 @@ static void op_step_in_step(op_step_t* op, float v) {
   outlet_float(op->pos2, (float) op->s_now);
 }
 
-static void op_step_handler(op_step_t* op, u8 x, u8 y, u8 z) {
-  op_monome_t *op_monome = &op->monome;
+static void op_step_handler(op_step_t *op, u8 x, u8 y, u8 z) {
+  t_monome *op_monome = &op->monome;
   u8 i;
 
   // only care about key-downs

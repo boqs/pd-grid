@@ -3,30 +3,33 @@
 
 #include "types.h"
 #include "m_pd.h"
+#include "lo/lo.h"
 
 #define MONOME_MAX_LED_BYTES 256
 extern u8 defaultLedBuffer[MONOME_MAX_LED_BYTES];
 extern u8 *monomeLedBuffer;
 
-typedef void(*monome_handler_t)(void* op, u8 x, u8 y, u8 z);
+typedef void(*monome_handler_t)(void *m, u8 x, u8 y, u8 z);
 
-typedef struct _op_monome {
+typedef struct _t_monome {
+  t_object x_obj;
   monome_handler_t handler;
   u8 focus;
   u8 opLedBuffer[MONOME_MAX_LED_BYTES];
-  // pointer to operator parent class
-  void* op;
-} op_monome_t;
+} t_monome;
 
-extern op_monome_t* monomeOpFocus;
+extern t_monome* monomeOpFocus;
 
-extern void net_monome_init(op_monome_t *op_monome, void *op, monome_handler_t h);
+extern void net_monome_setup (void);
+extern void net_monome_init(t_monome *op_monome, monome_handler_t h);
 
-extern void net_monome_set_focus(op_monome_t* grid, u8 focus);
-
+extern void net_monome_set_focus(t_monome* grid, u8 focus);
+extern void monome_add_focus_methods (t_class *op);
 extern void net_monome_grid_clear(void);
 extern u8 monome_size_x (void);
 extern u8 monome_size_y (void);
 extern  u8 monome_xy_idx(u8 x, u8 y);
 extern void serial_osc_grab_focus(void);
+extern void grid_tick(void *client);
+
 #endif // h guard
