@@ -1,1 +1,3 @@
 *.pd_linux
+*.o
+TAGS
