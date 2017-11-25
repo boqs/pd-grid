@@ -9,6 +9,7 @@ static void monome_update_128_grid ();
 
 static t_clock *grid_clock;
 
+// FIXME defaultLedBuffer should be bundled into monomeOpFocus
 u8 defaultLedBuffer[MONOME_MAX_LED_BYTES];
 u8 *monomeLedBuffer = defaultLedBuffer;
 t_monome* monomeOpFocus = NULL;
@@ -130,11 +131,11 @@ int monome_key_handler(const char *path, const char *types, lo_arg ** argv,
 		       int argc, void *data, void *user_data) {
   (void) path;
   (void) types;
-  (void) argc;
   (void) data;
   (void) user_data;
-  if(monomeOpFocus && monomeOpFocus->handler) {
-    (*monomeOpFocus->handler)(monomeOpFocus, (u8) argv[0]->i,
+  if(argc >= 3 && monomeOpFocus && monomeOpFocus->handler) {
+    (*monomeOpFocus->handler)(monomeOpFocus,
+			      (u8) argv[0]->i,
 			      (u8) argv[1]->i,
 			      (u8) argv[2]->i);
   }
