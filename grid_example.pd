@@ -23,6 +23,7 @@
 -1 -1;
 #X obj 188 172 metro 80;
 #X msg 117 223 step 1;
+#X msg 140 113 stop;
 #X connect 0 0 2 0;
 #X connect 1 0 0 0;
 #X connect 3 0 0 0;
@@ -43,3 +44,4 @@
 #X connect 20 0 21 0;
 #X connect 21 0 22 0;
 #X connect 22 0 9 0;
+#X connect 23 0 21 0;
