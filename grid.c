@@ -125,8 +125,15 @@ void grid_led(t_grid *op, t_floatarg x, t_floatarg y, t_floatarg z)  {
 
 void raw_button_handler(void* op, u8 x, u8 y, u8 z) {
   t_grid *grid_op = (t_grid *) op;
-  printf("raw_button_handler plumbing test: %d, %d, %d\n");
-  outlet_float(grid_op->button_out, x);
+  t_atom but[3];
+  but[0].a_type = A_FLOAT;
+  but[0].a_w.w_float = (float) x;
+  but[1].a_type = A_FLOAT;
+  but[1].a_w.w_float = (float)y;
+  but[2].a_type = A_FLOAT;
+  but[2].a_w.w_float = (float) z;
+  outlet_anything(grid_op->button_out, gensym("key"),
+		  3, but);
 }
 
 void *grid_new(t_symbol *s, int argc, t_atom *argv) {
