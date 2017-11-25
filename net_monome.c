@@ -8,6 +8,7 @@ static void monome_send_quadrant (int x, int y, int *testdata);
 static void monome_update_128_grid ();
 static void serial_osc_grab_focus(void);
 static void grid_tick(void *client);
+static void net_monome_set_focus(t_monome* grid, u8 focus);
 
 static t_clock *grid_clock;
 
@@ -36,12 +37,8 @@ void net_monome_init (t_monome *m, monome_handler_t h) {
   }
   m->handler = h;
 }
-
-void net_monome_grid_clear(void) {
-  int i;
-  for(i=0; i<MONOME_MAX_LED_BYTES; ++i) {
-    monomeLedBuffer[i] = 0;
-  }
+void net_monome_deinit (t_monome *m) {
+  net_monome_set_focus(m, 0);
 }
 u8 net_monome_size_x () {
   // FIXME for now we only are compatible with 128 grid

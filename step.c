@@ -81,7 +81,7 @@ void *step_new(t_symbol *s, int argc, t_atom *argv) {
 // de-init
 void op_step_deinit(void* op) {
   // release focus
-  net_monome_set_focus(&(((op_step_t*)op)->monome), 0);
+  net_monome_deinit((t_monome*)op);
 }
 
 //-------------------------------------------------
