@@ -51,7 +51,7 @@ void grid_setup(void) {
 			    0, sizeof(t_grid),  
 			    CLASS_DEFAULT,  
 			    A_GIMME, 0);  
-  monome_add_focus_methods(grid_class);
+  net_monome_add_focus_methods(grid_class);
   class_addmethod(grid_class,  
 		  (t_method)grid_led, gensym("led"),  
 		  A_DEFFLOAT, A_DEFFLOAT, A_DEFFLOAT, 0);  

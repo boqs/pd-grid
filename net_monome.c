@@ -6,6 +6,8 @@ static int monome_key_handler(const char *path, const char *types, lo_arg ** arg
 			      int argc, void *data, void *user_data);
 static void monome_send_quadrant (int x, int y, int *testdata);
 static void monome_update_128_grid ();
+static void serial_osc_grab_focus(void);
+static void grid_tick(void *client);
 
 static t_clock *grid_clock;
 
@@ -41,36 +43,36 @@ void net_monome_grid_clear(void) {
     monomeLedBuffer[i] = 0;
   }
 }
-u8 monome_size_x () {
+u8 net_monome_size_x () {
   // FIXME for now we only are compatible with 128 grid
   return 16;
 }
-u8 monome_size_y () {
+u8 net_monome_size_y () {
   // FIXME for now we only are compatible with 128 grid
   return 8;
 }
-u8 monome_xy_idx(u8 x, u8 y) {
+u8 net_monome_xy_idx(u8 x, u8 y) {
   return 16 * y + x;
 }
 
-void serial_osc_grab_focus(void) {
+static void serial_osc_grab_focus(void) {
   lo_address a = lo_address_new(NULL, "13188");
   lo_send(a, "/sys/port", "i", 6001);
 }
 
-void monome_focus(t_monome *m)  {
+void net_monome_focus(t_monome *m)  {
   net_monome_set_focus(m, 1);
   serial_osc_grab_focus();
 }
 
-void monome_unfocus(t_monome *m) {
+void net_monome_unfocus(t_monome *m) {
   net_monome_set_focus(m, 0);
   serial_osc_grab_focus();
 }
 
-void monome_add_focus_methods (t_class *op) {
-  class_addmethod((t_class *)op, (t_method)monome_unfocus, gensym("unfocus"), A_DEFFLOAT, 0);
-  class_addmethod((t_class *)op, (t_method)monome_focus, gensym("focus"), 0);
+void net_monome_add_focus_methods (t_class *op) {
+  class_addmethod((t_class *)op, (t_method)net_monome_unfocus, gensym("unfocus"), A_DEFFLOAT, 0);
+  class_addmethod((t_class *)op, (t_method)net_monome_focus, gensym("focus"), 0);
 }
 
 void grid_tick(void *client) {

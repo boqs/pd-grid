@@ -24,12 +24,10 @@ extern void net_monome_setup (void);
 extern void net_monome_init(t_monome *op_monome, monome_handler_t h);
 
 extern void net_monome_set_focus(t_monome* grid, u8 focus);
-extern void monome_add_focus_methods (t_class *op);
+extern void net_monome_add_focus_methods (t_class *op);
 extern void net_monome_grid_clear(void);
-extern u8 monome_size_x (void);
-extern u8 monome_size_y (void);
-extern  u8 monome_xy_idx(u8 x, u8 y);
-extern void serial_osc_grab_focus(void);
-extern void grid_tick(void *client);
+extern u8 net_monome_size_x (void);
+extern u8 net_monome_size_y (void);
+extern  u8 net_monome_xy_idx(u8 x, u8 y);
 
 #endif // h guard
