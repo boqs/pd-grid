@@ -1,2 +1,6 @@
-#N canvas 0 47 749 719 10;
+#N canvas 0 47 1364 719 10;
 #X obj 395 250 grid;
+#X msg 372 136 led 0 0 15;
+#X obj 416 338 print gridout;
+#X connect 0 0 2 0;
+#X connect 1 0 0 0;

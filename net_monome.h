@@ -10,7 +10,7 @@ extern u8 *monomeLedBuffer;
 /* extern bool monomeFrameDirty; */
 
 // handler function type
-typedef void(*monome_handler_t)(void* op, u32 event);
+typedef void(*monome_handler_t)(void* op, u8 x, u8 y, u8 z);
 
 // abstract superclass for monome operators
 // has event handler and focus flag
@@ -18,7 +18,7 @@ typedef struct _op_monome {
   // handler function, will connect to app event handler
   monome_handler_t handler;
   // focus flag
-  volatile io_t *focus;
+  u8 focus;
   u8 opLedBuffer[MONOME_MAX_LED_BYTES];
   // pointer to operator subclass
   void* op;
@@ -27,8 +27,6 @@ typedef struct _op_monome {
 //---------------------
 //----- variables
 
-extern monome_handler_t monome_grid_key_handler;
-extern monome_handler_t monome_ring_enc_handler;
 extern op_monome_t* monomeOpFocus;
 
 // device-connected flag
@@ -38,7 +36,7 @@ extern bool monomeConnect;
 //----- functions
 
 // initialize
-void net_monome_init(op_monome_t *op_monome, void *op);
+void net_monome_init(op_monome_t *op_monome, void *op, monome_handler_t h);
 
 // set/release focus
 extern void net_monome_set_focus(op_monome_t* grid, u8 focus);

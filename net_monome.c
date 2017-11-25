@@ -18,7 +18,7 @@ bool monomeConnect = 0;
 
 
 // dummy handler
-static void dummyHandler(void* op, u32 edata) { return; }
+static void dummyHandler(void* op, u8 x, u8 y, u8 z) { return; }
 
 //---------------------------------
 // extern variables, initialized here.
@@ -34,8 +34,6 @@ u8 *monomeLedBuffer = defaultLedBuffer;
 // this would means that multiple operators would be mapped
 // arbitrarily to different sources! oy...
 
-monome_handler_t monome_grid_key_handler = &dummyHandler; //&monome_grid_key_loopback;
-monome_handler_t monome_ring_enc_handler = &dummyHandler; //&monome_ring_enc_loopback;
 op_monome_t* monomeOpFocus = NULL;
 
 
@@ -74,21 +72,20 @@ void net_monome_set_focus(op_monome_t* op_monome, u8 focus) {
     //    if(monomeOpFocus != NULL ) {
     if((monomeOpFocus != NULL) && (monomeOpFocus != op_monome)) {
       /// stealing focus, inform the previous holder
-      *(monomeOpFocus->focus) = 0;
+      monomeOpFocus->focus = 0;
     }
-    monome_grid_key_handler = op_monome->handler;
     monomeLedBuffer = op_monome->opLedBuffer;
     monomeOpFocus = op_monome;
-    *(op_monome->focus) = 1;
+    op_monome->focus = 1;
   } else {
-    monome_grid_key_handler = (monome_handler_t)&dummyHandler;
     monomeLedBuffer = defaultLedBuffer;
     monomeOpFocus = NULL;
-    *(op_monome->focus) = 0;
+    op_monome->focus = 0;
   }
 }
 
-void net_monome_init(op_monome_t *op_monome, void *op) {
+void net_monome_init(op_monome_t *op_monome, void *op, monome_handler_t h) {
+  op_monome->handler = h;
   op_monome->op = op;
   int i;
   for(i=0; i<MONOME_MAX_LED_BYTES; ++i) {

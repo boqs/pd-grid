@@ -7,7 +7,7 @@ class.sources = grid.c
 PDINCLUDEDIR=/usr/local/include/pd
 
 ldflags = -llo -fno-common -g
-cflags+= -I./dummy_include
+cflags+= -I./dummy_include -g
 
 #datafiles = myclass1-help.pd myclass2-help.pd README.txt LICENSE.txt
 
