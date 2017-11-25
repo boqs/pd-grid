@@ -3,8 +3,8 @@
 lib.name = grid
 
 class.sources = grid.c\
-	step.c
-#	ww.c
+	step.c \
+	ww.c
 
 PDINCLUDEDIR=/usr/local/include/pd
 
