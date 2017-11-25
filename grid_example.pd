@@ -2,5 +2,16 @@
 #X obj 395 250 grid;
 #X msg 372 136 led 0 0 15;
 #X obj 416 338 print gridout;
+#X msg 464 136 focus;
+#X obj 569 250 grid;
+#X obj 590 338 print gridout;
+#X msg 638 136 focus;
+#X msg 546 136 led 8 0 15;
+#X msg 722 131 unfocus;
 #X connect 0 0 2 0;
 #X connect 1 0 0 0;
+#X connect 3 0 0 0;
+#X connect 4 0 5 0;
+#X connect 6 0 4 0;
+#X connect 7 0 4 0;
+#X connect 8 0 4 0;
