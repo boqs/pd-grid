@@ -1,62 +1,16 @@
-// asf
-#include "print_funcs.h"
-// bees
-#include "app_timers.h"
-#include "net_protected.h"
-#include "net_poll.h"
-#include "op_kria.h"
-#include "timers.h"
-
-
-// this op hogs a lot of space in program memory. print_dbg doesn't
-// fit in a build with op_kria
-#ifndef BEEKEEP
-#if RELEASEBUILD==1
-#else
-#define DISABLE_KRIA
-#endif
-#endif
-//-------------------------------------------------
-//----- static variables
-
-//---- descriptor strings
-static const char* op_kria_instring = "FOCUS\0  CLOCK\0  OCTAVE\0 TUNING\0 ";
-static const char* op_kria_outstring ="TR0\0    NOTE0\0  TR1\0    NOTE1\0  ";
-static const char* op_kria_opstring = "KRIA";
-
-//-------------------------------------------------
-//----- static function declaration
-
-//---- input functions
+#include "kria.h"
 
 //// network inputs:
-static void op_kria_in_focus(op_kria_t* grid, const io_t val);
-static void op_kria_in_clock(op_kria_t* grid, const io_t val);
-static void op_kria_in_octave(op_kria_t* grid, const io_t val);
-static void op_kria_in_tuning(op_kria_t* grid, const io_t val);
-
-// pickles
-static u8* op_kria_pickle(op_kria_t* enc, u8* dst);
-static const u8* op_kria_unpickle(op_kria_t* enc, const u8* src);
-
-// timer manipulation
-static inline void op_kria_set_timer(op_kria_t* kria);
-static inline void op_kria_unset_timer(op_kria_t* kria);
-
+static void op_kria_in_clock(op_kria_t* grid, float f);
+static void op_kria_in_octave(op_kria_t* grid, float f);
+static void op_kria_in_tuning(op_kria_t* grid, float f);
 
 // polled-operator handler
 static void op_kria_poll_handler(void* op);
 
 /// monome event handler
-static void op_kria_handler(op_monome_t* op_monome, u32 data);
+static void op_kria_handler(t_monome* op_monome, u8 x, u8 y, u8 z);
 
-// input func pointer array
-static op_in_fn op_kria_in_fn[4] = {
-  (op_in_fn)&op_kria_in_focus,
-  (op_in_fn)&op_kria_in_clock,
-  (op_in_fn)&op_kria_in_octave,
-  (op_in_fn)&op_kria_in_tuning,
-};
 
 #define L2 12
 #define L1 8
@@ -103,8 +57,6 @@ u8 sc[2];
 u16 trans[2];
 u16 cv[2];
 
-u8 dirty = 0;
-
 u8 pos_mul[2][NUM_PARAMS];
 
 static void adjust_loop_start(op_kria_t *kria, u8 x, u8 m);
@@ -123,20 +75,20 @@ bool kria_next_step(op_kria_t *kria, uint8_t t, uint8_t p);
 ////////////////////////////////////////////////////////////////////////////////
 // timers
 
-static softTimer_t clockTimer = { .next = NULL, .prev = NULL };
-static softTimer_t keyTimer = { .next = NULL, .prev = NULL };
-static softTimer_t adcTimer = { .next = NULL, .prev = NULL };
-static softTimer_t monomePollTimer = { .next = NULL, .prev = NULL };
-static softTimer_t monomeRefreshTimer  = { .next = NULL, .prev = NULL };
+/* static softTimer_t clockTimer = { .next = NULL, .prev = NULL }; */
+/* static softTimer_t keyTimer = { .next = NULL, .prev = NULL }; */
+/* static softTimer_t adcTimer = { .next = NULL, .prev = NULL }; */
+/* static softTimer_t monomePollTimer = { .next = NULL, .prev = NULL }; */
+/* static softTimer_t monomeRefreshTimer  = { .next = NULL, .prev = NULL }; */
 
-static softTimer_t note0offTimer = { .next = NULL, .prev = NULL };
-static softTimer_t note1offTimer = { .next = NULL, .prev = NULL };
+/* static softTimer_t note0offTimer = { .next = NULL, .prev = NULL }; */
+/* static softTimer_t note1offTimer = { .next = NULL, .prev = NULL }; */
 
 static void note0offTimer_callback(void* o) {
   op_kria_t *kria = (op_kria_t *) o;
   if(need0off) {
     need0off = 0;
-    net_activate(kria, 0, 0);
+    outlet_float(kria->tr0, 0);
   }
 }
 
@@ -144,15 +96,15 @@ static void note1offTimer_callback(void* o) {
   op_kria_t *kria = (op_kria_t *) o;
   if(need1off) {
     need1off = 0;
-    net_activate(kria, 2, 0);
+    outlet_float(kria->tr1, 0);
   }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // prototypes
 
-static void kria_refresh(op_monome_t *op_monome);
-/* static void kria_refresh_mono(op_monome_t *op_monome); */
+static void kria_refresh(t_monome *op_monome);
+/* static void kria_refresh_mono(t_monome *op_monome); */
 
 // static void handler_KeyTimer(s32 data);
 
@@ -169,53 +121,40 @@ static void phase_reset1(op_kria_t *kria) {
 }
 
 
+static t_class *op_kria_class;
+void *kria_new(t_symbol *s, int argc, t_atom *argv);
+void kria_setup (void) {
+  net_monome_setup();
+  op_kria_class = class_new(gensym("kria"),
+			  (t_newmethod)kria_new,
+			  0, sizeof(op_kria_t),
+			  CLASS_DEFAULT,
+			  A_GIMME, 0);
+  net_monome_add_focus_methods(op_kria_class);
+  class_addmethod(op_kria_class,
+		  (t_method)op_kria_in_clock, gensym("clock"), A_DEFFLOAT, 0);
+  class_addmethod(op_kria_class,
+		  (t_method)op_kria_in_octave, gensym("octave"), A_DEFFLOAT, 0);
+  class_addmethod(op_kria_class,
+		  (t_method)op_kria_in_tuning, gensym("tuning"), A_DEFFLOAT, 0);
+}
 
 //-------------------------------------------------
 //----- extern function definition
-void op_kria_init(void* mem) {
+void *kria_new(t_symbol *s, int argc, t_atom *argv) {
+  (void) s;
+  (void) argc;
+  (void) argv;
   u8 i1,i2;
-  op_kria_t* op = (op_kria_t*)mem;
+  op_kria_t *op = (op_kria_t *)pd_new(op_kria_class);
 
-  // superclass functions
-  //--- op
-  op->super.in_fn = op_kria_in_fn;
-  op->super.pickle = (op_pickle_fn) (&op_kria_pickle);
-  op->super.unpickle = (op_unpickle_fn) (&op_kria_unpickle);
+  op->tr0 = outlet_new((t_object *) op, &s_float);
+  op->note0 = outlet_new((t_object *) op, &s_float);
+  op->tr1 = outlet_new((t_object *) op, &s_float);
+  op->note1 = outlet_new((t_object *) op, &s_float);
 
-  // polled operator superclass
-  op->op_poll.handler = (poll_handler_t)(&op_kria_poll_handler);
-  op->op_poll.op = op;
+  net_monome_init(&op->monome, (monome_handler_t)&op_kria_handler);
 
-  //--- monome
-  op->monome.handler = (monome_handler_t)&op_kria_handler;
-  net_monome_init(&op->monome, op);
-
-  // superclass state
-
-  op->super.type = eOpKria;
-  op->super.flags |= (1 << eOpFlagMonomeGrid);
-
-  op->super.numInputs = 4;
-  op->super.numOutputs = 4;
-
-  op->super.in_val = op->in_val;
-  op->super.out = op->outs;
-
-  op->super.opString = op_kria_opstring;
-  op->super.inString = op_kria_instring;
-  op->super.outString = op_kria_outstring;
-
-  op->in_val[0] = &(op->focus);
-  op->monome.focus = &(op->focus);
-  op->in_val[1] = &(op->clk);
-  op->in_val[2] = &(op->octave);
-  op->in_val[3] = &(op->tuning);
-  op->outs[0] = -1;
-  op->outs[1] = -1;
-  op->outs[2] = -1;
-  op->outs[3] = -1;
-
-  op->focus = 0;
   op->clk = 0;
   op->octave = 12;
   op->tuning = 5;
@@ -258,44 +197,23 @@ void op_kria_init(void* mem) {
 
 
 
-  if(!recallingScene) {
-    net_monome_set_focus( &(op->monome), 1);
-  }
-
   // init monome drawing
   kria_refresh(&op->monome);
 
-  op_kria_set_timer(op);
-  timer_add(&note0offTimer,10000,&note0offTimer_callback, op);
-  timer_add(&note1offTimer,10000,&note1offTimer_callback, op);
+  op->clock = clock_new(op, (t_method) op_kria_poll_handler);
+  clock_delay(op->clock,  OP_KRIA_POLL_TIME);
+  op->note0offTimer = clock_new(op, (t_method)note0offTimer_callback);
+  op->note1offTimer = clock_new(op, (t_method)note1offTimer_callback);
+  return (void *) op;
 }
 
 // de-init
-void op_kria_deinit(void* op) {
-  // release focus
-  net_monome_set_focus(&(((op_kria_t*)op)->monome), 0);
-  op_kria_unset_timer(op);
-  timer_remove(&note0offTimer);
-  timer_remove(&note1offTimer);
+void kria_free(op_kria_t* op) {
+  net_monome_deinit((t_monome *)op);
+  clock_free(op->note0offTimer);
+  clock_free(op->note1offTimer);
+  clock_free(op->clock);
 }
-
-//-------------------------------------------------
-//----- static function definition
-
-//--- network input functions
-static void op_kria_in_focus(op_kria_t* op, const io_t v) {
-  // this monster op uses up a *lot* of program memory...
-#ifndef DISABLE_KRIA
-  if((v) > 0) {
-    op->focus = OP_ONE;
-  } else {
-    op->focus = 0;
-  }
-
-  net_monome_set_focus( &(op->monome), op->focus > 0);
-#endif
-}
-
 
 // t = track
 // param = mode_idx (enum modes)
@@ -369,54 +287,43 @@ static void op_kria_track_tick (op_kria_t *kria, u8 t) {
 #endif
 }
 
-static void op_kria_in_octave(op_kria_t* op, const io_t v) {
-#ifndef DISABLE_KRIA
-  op->octave = v;
-#endif
+static void op_kria_in_octave(op_kria_t* op, float f) {
+  op->octave = f;
 }
 
-static void op_kria_in_tuning(op_kria_t* op, const io_t v) {
-#ifndef DISABLE_KRIA
-  op->tuning = v;
-#endif
+static void op_kria_in_tuning(op_kria_t* op, float f) {
+  op->tuning = f;
 }
 
-static void op_kria_in_clock(op_kria_t* op, const io_t v) {
-#ifndef DISABLE_KRIA
-  op->clk = 0;
+static void op_kria_in_clock(op_kria_t* op, float f) {
+  op->clk = f;
   op_kria_track_tick(op, 0);
   op_kria_track_tick(op, 1);
   if(tr[0]) {
-    net_activate(op, 1, cv[0]);
-    net_activate(op, 0, tr[0]);
+    outlet_float(op->note0, (float) cv[0]);
+    outlet_float(op->tr0, (float) tr[0]);
     need0off = 1;
-    timer_reset_set(&note0offTimer, dur[0]);
+    clock_delay(op->note0offTimer, dur[0]);
 
   }
   if(tr[1]) {
-    net_activate(op, 3, cv[1]);
-    net_activate(op, 2, tr[1]);
+    outlet_float(op->note1, (float) cv[1]);
+    outlet_float(op->tr1, (float) tr[1]);
     need1off = 1;
-    timer_reset_set(&note1offTimer, dur[1]);
+    clock_delay(op->note1offTimer, dur[1]);
   }
   tr[0] = 0;
   tr[1] = 0;
 
   // FIXME not optimal - but for now total redraw on every clock
-  dirty = 1;
-#endif
 }
 
 
 // poll event handler
 static void op_kria_poll_handler(void* op) {
-#ifndef DISABLE_KRIA
   op_kria_t *kria = (op_kria_t *) op;
-  if(dirty) {
-    kria_refresh(&kria->monome);
-  }
-  dirty = 0;
-#endif
+  kria_refresh(&kria->monome);
+  clock_delay(kria->clock, OP_KRIA_POLL_TIME);
 }
 
 static void handle_bottom_row_key(op_kria_t *kria, u8 x, u8 z) {
@@ -488,7 +395,6 @@ static void mode_mTr_handle_key(op_kria_t *kria, u8 x, u8 y, u8 z) {
 	kria->k.kp[ch][p].ac[x] ^= 1;
       else if(y>1)
 	kria->k.kp[ch][p].oct[x] = 6-y;
-      monomeFrameDirty++;
     }
   }
   else if(mod_mode == modLoop) {
@@ -526,7 +432,6 @@ static void mode_mTr_handle_key(op_kria_t *kria, u8 x, u8 y, u8 z) {
 	else if(y>1)
 	  adjust_loop_end(kria, x, tOct);
       }
-      monomeFrameDirty++;
     }
     else {
       loop_count--;
@@ -634,8 +539,6 @@ static void mode_mScale_handle_key (op_kria_t *kria, u8 x, u8 y, u8 z) {
       // }
     }
 
-    /* printf("setting dirty\n"); */
-    monomeFrameDirty++;
   }
   else if(mod_mode == modLoop) loop_count--;
 #endif
@@ -765,11 +668,9 @@ static void mode_mPattern_handle_key (op_kria_t *kria, u8 x, u8 y, u8 z) {
 }
 
 // process monome key input
-static void op_kria_handler(op_monome_t* op_monome, u32 data) {
+static void op_kria_handler(t_monome* op_monome, u8 x, u8 y, u8 z) {
 #ifndef DISABLE_KRIA
-  op_kria_t *kria = (op_kria_t *) op_monome->op;
-  u8 x, y, z;
-  monome_grid_key_parse_event_data(data, &x, &y, &z);
+  op_kria_t *kria = (op_kria_t *) op_monome;
 
   // bottom row
   if(y == 7) {
@@ -798,7 +699,6 @@ static void op_kria_handler(op_monome_t* op_monome, u32 data) {
     mode_mPattern_handle_key(kria, x, y, z);
   }
   // FIXME not optimal - but for now simply total redraw on every press
-  dirty = 1;
 #endif
 }
 
@@ -862,7 +762,7 @@ static void calc_scale(op_kria_t *kria, u8 c) {
 #endif
 }
 
-static void bottom_strip_redraw (op_monome_t *op_monome) {
+static void bottom_strip_redraw (t_monome *op_monome) {
 #ifndef DISABLE_KRIA
   u8 i1;
   op_monome->opLedBuffer[112+(ch==0)] = L0;
@@ -884,9 +784,9 @@ static void bottom_strip_redraw (op_monome_t *op_monome) {
 #endif
 }
 
-static void mode_mTr_redraw (op_monome_t *op_monome) {
+static void mode_mTr_redraw (t_monome *op_monome) {
 #ifndef DISABLE_KRIA
-  op_kria_t *kria = (op_kria_t *) op_monome->op;
+  op_kria_t *kria = (op_kria_t *) op_monome;
   u8 i1, i2;
   if(mod_mode != modTime) {
     for(i1=0;i1<112;i1++)
@@ -984,9 +884,9 @@ static void mode_mTr_redraw (op_monome_t *op_monome) {
 #endif
 }
 
-static void mode_mDur_redraw (op_monome_t *op_monome) {
+static void mode_mDur_redraw (t_monome *op_monome) {
 #ifndef DISABLE_KRIA
-  op_kria_t *kria = (op_kria_t *) op_monome->op;
+  op_kria_t *kria = (op_kria_t *) op_monome;
   u8 i1, i2;
   if(mod_mode != modTime) {
     for(i1=0;i1<112;i1++)
@@ -1026,9 +926,9 @@ static void mode_mDur_redraw (op_monome_t *op_monome) {
 #endif
 }
 
-static void mode_mNote_redraw (op_monome_t *op_monome) {
+static void mode_mNote_redraw (t_monome *op_monome) {
 #ifndef DISABLE_KRIA
-  op_kria_t *kria = (op_kria_t *) op_monome->op;
+  op_kria_t *kria = (op_kria_t *) op_monome;
   u8 i1;
   if(mod_mode != modTime) {
     for(i1=0;i1<112;i1++)
@@ -1059,9 +959,9 @@ static void mode_mNote_redraw (op_monome_t *op_monome) {
 #endif
 }
 
-static void mode_mScale_redraw (op_monome_t *op_monome) {
+static void mode_mScale_redraw (t_monome *op_monome) {
 #ifndef DISABLE_KRIA
-  op_kria_t *kria = (op_kria_t *) op_monome->op;
+  op_kria_t *kria = (op_kria_t *) op_monome;
   u8 i1, i2;
   if(mod_mode != modTime) {
     for(i1=0;i1<112;i1++)
@@ -1101,9 +1001,9 @@ static void mode_mScale_redraw (op_monome_t *op_monome) {
 #endif
 }
 
-static void mode_mTrans_redraw (op_monome_t *op_monome) {
+static void mode_mTrans_redraw (t_monome *op_monome) {
 #ifndef DISABLE_KRIA
-  op_kria_t *kria = (op_kria_t *) op_monome->op;
+  op_kria_t *kria = (op_kria_t *) op_monome;
   u8 i1;
   if(mod_mode != modTime) {
     for(i1=0;i1<112;i1++)
@@ -1141,9 +1041,9 @@ static void mode_mTrans_redraw (op_monome_t *op_monome) {
 #endif
 }
 
-static void mode_mScaleEdit_redraw (op_monome_t *op_monome) {
+static void mode_mScaleEdit_redraw (t_monome *op_monome) {
 #ifndef DISABLE_KRIA
-  op_kria_t *kria = (op_kria_t *) op_monome->op;
+  op_kria_t *kria = (op_kria_t *) op_monome;
   u8 i1;
   op_monome->opLedBuffer[112] = L1;
   op_monome->opLedBuffer[113] = L1;
@@ -1176,7 +1076,7 @@ static void mode_mScaleEdit_redraw (op_monome_t *op_monome) {
 #endif
 }
 
-static void mode_mPattern_redraw (op_monome_t *op_monome) {
+static void mode_mPattern_redraw (t_monome *op_monome) {
 #ifndef DISABLE_KRIA
   u8 i1;
   op_monome->opLedBuffer[112] = L1;
@@ -1192,7 +1092,7 @@ static void mode_mPattern_redraw (op_monome_t *op_monome) {
 #endif
 }
 
-static void kria_refresh(op_monome_t *op_monome) {
+static void kria_refresh(t_monome *op_monome) {
 #ifndef DISABLE_KRIA
   bottom_strip_redraw(op_monome);
 
@@ -1218,49 +1118,39 @@ static void kria_refresh(op_monome_t *op_monome) {
     mode_mPattern_redraw(op_monome);
   }
 
-  monome_set_quadrant_flag(0);
-  monome_set_quadrant_flag(1);
 #endif
 }
 
-// pickle / unpickle
-u8* op_kria_pickle(op_kria_t* kria, u8* dst) {
-  dst = pickle_io(kria->focus, dst);
-  dst = pickle_io(kria->octave, dst);
-  dst = pickle_io(kria->tuning, dst);
+/* // pickle / unpickle */
+/* u8* op_kria_pickle(op_kria_t* kria, u8* dst) { */
+/*   dst = pickle_io(kria->focus, dst); */
+/*   dst = pickle_io(kria->octave, dst); */
+/*   dst = pickle_io(kria->tuning, dst); */
 
-  u32 *kria_state = (u32*)&(kria->k);
-  while ((u8*)kria_state < ((u8*) &(kria->k)) + sizeof(kria_set)) {
-    dst = pickle_32(*kria_state, dst);
-    kria_state +=1;
-  }
+/*   u32 *kria_state = (u32*)&(kria->k); */
+/*   while ((u8*)kria_state < ((u8*) &(kria->k)) + sizeof(kria_set)) { */
+/*     dst = pickle_32(*kria_state, dst); */
+/*     kria_state +=1; */
+/*   } */
 
-  return dst;
-}
+/*   return dst; */
+/* } */
 
-const u8* op_kria_unpickle(op_kria_t* kria, const u8* src) {
-  src = unpickle_io(src, (u32*)&(kria->focus));
-  src = unpickle_io(src, (u32*)&(kria->octave));
-  src = unpickle_io(src, (u32*)&(kria->tuning));
+/* const u8* op_kria_unpickle(op_kria_t* kria, const u8* src) { */
+/*   src = unpickle_io(src, (u32*)&(kria->focus)); */
+/*   src = unpickle_io(src, (u32*)&(kria->octave)); */
+/*   src = unpickle_io(src, (u32*)&(kria->tuning)); */
 
-  u32 *kria_state = (u32*)&(kria->k);
-  while ((u8*)kria_state < ((u8*) &(kria->k)) + sizeof(kria_set)) {
-    src = unpickle_32(src, kria_state);
-    kria_state +=1;
-  }
-  calc_scale(kria, 0);
-  calc_scale(kria, 1);
-  if (kria->focus > 0) {
-    net_monome_set_focus( &(kria->monome), 1);
-  }
-  return src;
-}
+/*   u32 *kria_state = (u32*)&(kria->k); */
+/*   while ((u8*)kria_state < ((u8*) &(kria->k)) + sizeof(kria_set)) { */
+/*     src = unpickle_32(src, kria_state); */
+/*     kria_state +=1; */
+/*   } */
+/*   calc_scale(kria, 0); */
+/*   calc_scale(kria, 1); */
+/*   if (kria->focus > 0) { */
+/*     net_monome_set_focus( &(kria->monome), 1); */
+/*   } */
+/*   return src; */
+/* } */
 
-// timer manipulation
-static inline void op_kria_set_timer(op_kria_t* kria) {
-  timers_set_custom(&(kria->timer), 50, &(kria->op_poll) );
-}
-
-static inline void op_kria_unset_timer(op_kria_t* kria) {
-  timer_remove(&(kria->timer));
-}

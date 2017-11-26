@@ -35,9 +35,16 @@
 #X floatatom 976 321 5 0 0 0 - - -, f 5;
 #X floatatom 1010 321 5 0 0 0 - - -, f 5;
 #X obj 980 52 vsl 15 128 0 4095 0 0 empty empty empty 0 -9 0 10 -262144
--1 -1 7600 1;
+-1 -1 0 1;
 #X msg 965 197 param \$1;
 #X floatatom 1037 199 5 0 0 0 - - -, f 5;
+#X obj 181 495 kria 0 0 0 0;
+#X msg 170 400 focus;
+#X msg 244 400 clock 1;
+#X floatatom 186 529 5 0 0 0 - - -, f 5;
+#X floatatom 222 536 5 0 0 0 - - -, f 5;
+#X floatatom 271 526 5 0 0 0 - - -, f 5;
+#X floatatom 149 531 5 0 0 0 - - -, f 5;
 #X connect 0 0 2 0;
 #X connect 1 0 0 0;
 #X connect 3 0 0 0;
@@ -71,3 +78,9 @@
 #X connect 34 0 35 0;
 #X connect 34 0 36 0;
 #X connect 35 0 24 0;
+#X connect 37 0 43 0;
+#X connect 37 1 40 0;
+#X connect 37 2 41 0;
+#X connect 37 3 42 0;
+#X connect 38 0 37 0;
+#X connect 39 0 37 0;

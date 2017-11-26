@@ -1,11 +1,9 @@
-#ifndef _ALEPH_BEES_OP_KRIA_H_
-#define _ALEPH_BEES_OP_KRIA_H_
+#ifndef _OP_KRIA_H_
+#define __OP_KRIA_H_
 
 #include "net_monome.h"
-#include "net_poll.h"
-#include "op.h"
-#include "op_math.h"
 #include "types.h"
+#define OP_KRIA_POLL_TIME 50
 
 typedef enum {
   mTr, mDur, mNote, mScale, mTrans, mScaleEdit, mPattern
@@ -51,25 +49,21 @@ typedef struct {
 
 //--- white whale
 typedef struct op_kria_struct {
-  op_t super;
-  op_monome_t monome;
+  t_monome monome;
   kria_set k;
   // inputs: mode, focus, step
-  volatile io_t focus;
-  volatile io_t clk;
-  volatile io_t octave;
-  volatile io_t tuning;
-  volatile io_t* in_val[4];
+  s16 clk;
+  s16 octave;
+  s16 tuning;
   // outputs: a,b,c,d
-  op_out_t outs[4];
-  // internal:
+  t_outlet *tr0;
+  t_outlet *note0;
+  t_outlet *tr1;
+  t_outlet *note1;
 
-
-    // timer data
-  softTimer_t timer;
-  // polled operator superclass
-  op_poll_t op_poll;
-
+  t_clock *clock;
+  t_clock *note0offTimer;
+  t_clock *note1offTimer;
 } op_kria_t;
 
 // init
