@@ -38,4 +38,12 @@ all the grid ops in this 'ecosystem' respond to the message 'focus' by
 grabbing focus of a connected monome grid.  'unfocus' gives focus back
 to the focus manager, showing a diagonal gradient on the grid.
 
+known bugs:
+
+the only known bug is that some of the new classes have quite a few
+outlets.  So when you create, for example, a meadowphysics you have to
+add a bunch of 0s after the op name - so instead of "mp" you have to
+instantiate it as "mp 0 0 0 0 0 0 0 0 0" to leave enough space for all
+the outlets.  If anyone knows how to fix this, drop me a line!
+
 bugs & feature requests to sasquatch@rickvenn.com
