@@ -63,7 +63,7 @@ void grid_setup(void) {
   }
 }
 
-void grid_deinit(void* op) {
+void grid_free(void* op) {
   // release focus
   net_monome_deinit((t_monome*)op);
 }
