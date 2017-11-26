@@ -54,13 +54,6 @@ void grid_setup(void) {
   class_addmethod(grid_class,  
 		  (t_method)grid_led, gensym("led"),  
 		  A_DEFFLOAT, A_DEFFLOAT, A_DEFFLOAT, 0);  
- 
-  int i, j;
-  for(i=0; i<16; i++) {
-    for(j=0; j<8; j++) {
-      defaultLedBuffer[i+j*16] = 15-(i/2 + j);
-    }
-  }
 }
 
 void grid_free(void* op) {

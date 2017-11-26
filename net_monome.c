@@ -27,6 +27,13 @@ void net_monome_setup (void) {
     serial_osc_grab_focus();
     grid_clock = clock_new(NULL, (t_method) grid_tick);
     clock_delay(grid_clock, 10.0);
+
+    int i, j;
+    for(i=0; i<16; i++) {
+      for(j=0; j<8; j++) {
+	defaultLedBuffer[i+j*16] = 15-(i/2 + j);
+      }
+    }
   }
 }
 
