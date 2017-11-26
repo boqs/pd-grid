@@ -1,11 +1,10 @@
-#ifndef _ALEPH_BEES_OP_WW_H_
-#define _ALEPH_BEES_OP_WW_H_
+#ifndef __OP_WW_H_
+#define __OP_WW_H_
 
 #include "net_monome.h"
-#include "net_poll.h"
-#include "op.h"
-#include "op_math.h"
 #include "types.h"
+
+#define OP_WW_POLL_TIME 50
 
 typedef enum {
   mTrig, mMap, mSeries
@@ -37,7 +36,7 @@ typedef struct {
   u8 cv_mute[2];
 } whale_set;
 
-typedef void(*re_t)(op_monome_t *op_monome);
+typedef void(*re_t)(t_monome *op_monome);
 
 typedef struct {
   edit_modes edit_mode;
@@ -50,14 +49,14 @@ typedef struct {
   u8 pattern;
   u8 next_pattern;
   u8 pattern_jump;
-  
+
   u8 series_pos;
   u8 series_next;
   u8 series_jump;
   u8 series_playing;
   u8 screll;
   u8 screll_pos;
-  
+
   u8 key_alt;
   u8 center;
   u8 held_keys[32];
@@ -67,7 +66,7 @@ typedef struct {
   s8 keycount_pos;
   u8 keycount_series;
   u8 keycount_cv;
-  
+
   s8 pos;
   s8 cut_pos;
   s8 next_pos;
@@ -76,42 +75,44 @@ typedef struct {
   u8 cv_chosen[2];
   u16 cv0;
   u16 cv1;
-  
+
   u8 param_accept;
   u8 *param_dest8;
   u16 clip;
   u16 *param_dest;
-  
+
   u8 series_step;
-  
+
   u8 SIZE;
   u8 LENGTH;
   u8 VARI;
   re_t re;
   u8 dirty;
-  
+
   u8 tr[4];
   u16 param;
 } whale_extra;
 
 //--- white whale
 typedef struct op_ww_struct {
-  op_t super;
-  op_monome_t monome;
+  t_monome monome;
   // inputs: mode, focus, step
-  volatile io_t focus;
-  volatile io_t clk;
-  volatile io_t param;
-  volatile io_t* in_val[3];
-  // outputs: a,b,c,d
-  op_out_t outs[7];
-  // internal:
+  s16 clk;
+  s16 param;
+  // outputs: tr0, tr1, tr2, tr3, cva, cvb, pos
+  t_outlet *tr0;
+  t_outlet *tr1;
+  t_outlet *tr2;
+  t_outlet *tr3;
+
+  t_outlet *cva;
+  t_outlet *cvb;
+  t_outlet *pos;
 
 
     // timer data
-  softTimer_t timer;
-  // polled operator superclass
-  op_poll_t op_poll;
+  t_clock *clock;
+
   whale_set w;
   whale_extra x;
 } op_ww_t;

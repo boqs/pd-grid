@@ -24,6 +24,20 @@
 #X obj 188 172 metro 80;
 #X msg 117 223 step 1;
 #X msg 140 113 stop;
+#X obj 874 264 ww 0 0 0 0 0 0;
+#X msg 916 160 focus;
+#X msg 858 166 clock 1;
+#X floatatom 874 320 5 0 0 0 - - -, f 5;
+#X floatatom 807 320 5 0 0 0 - - -, f 5;
+#X floatatom 843 320 5 0 0 0 - - -, f 5;
+#X floatatom 905 320 5 0 0 0 - - -, f 5;
+#X floatatom 938 320 5 0 0 0 - - -, f 5;
+#X floatatom 976 321 5 0 0 0 - - -, f 5;
+#X floatatom 1010 321 5 0 0 0 - - -, f 5;
+#X obj 980 52 vsl 15 128 0 4095 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 7600 1;
+#X msg 965 197 param \$1;
+#X floatatom 1037 199 5 0 0 0 - - -, f 5;
 #X connect 0 0 2 0;
 #X connect 1 0 0 0;
 #X connect 3 0 0 0;
@@ -45,3 +59,15 @@
 #X connect 21 0 22 0;
 #X connect 22 0 9 0;
 #X connect 23 0 21 0;
+#X connect 24 0 28 0;
+#X connect 24 1 29 0;
+#X connect 24 2 27 0;
+#X connect 24 3 30 0;
+#X connect 24 4 31 0;
+#X connect 24 5 32 0;
+#X connect 24 6 33 0;
+#X connect 25 0 24 0;
+#X connect 26 0 24 0;
+#X connect 34 0 35 0;
+#X connect 34 0 36 0;
+#X connect 35 0 24 0;
