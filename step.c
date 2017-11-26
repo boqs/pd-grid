@@ -2,6 +2,7 @@
 
 static void op_step_handler(op_step_t *op, u8 x, u8 y, u8 z);
 static void op_step_in_step(op_step_t* op, float v);
+static void op_step_in_bang(op_step_t* op);
 static void op_step_in_size(op_step_t* op, float v);
 
 static t_class *op_step_class;
@@ -13,6 +14,7 @@ void step_setup (void) {
 			    0, sizeof(op_step_t),
 			    CLASS_DEFAULT,
 			    A_GIMME, 0);
+  class_addbang(op_step_class, (t_method)op_step_in_bang);
   class_addmethod(op_step_class,
 		  (t_method)op_step_in_step, gensym("step"), A_DEFFLOAT, 0);
   class_addmethod(op_step_class,
@@ -29,10 +31,10 @@ void *step_new(t_symbol *s, int argc, t_atom *argv) {
   u8 i;
   op_step_t *op = (op_step_t *)pd_new(op_step_class);
 
-  op->a = outlet_new((t_object *) op, &s_float);
-  op->b = outlet_new((t_object *) op, &s_float);
-  op->c = outlet_new((t_object *) op, &s_float);
-  op->d = outlet_new((t_object *) op, &s_float);
+  op->a = outlet_new((t_object *) op, &s_bang);
+  op->b = outlet_new((t_object *) op, &s_bang);
+  op->c = outlet_new((t_object *) op, &s_bang);
+  op->d = outlet_new((t_object *) op, &s_bang);
   op->mono1 = outlet_new((t_object *) op, &s_float);
   op->pos1 = outlet_new((t_object *) op, &s_float);
   op->mono2 = outlet_new((t_object *) op, &s_float);
@@ -92,7 +94,12 @@ static void op_step_in_size(op_step_t* op, float v) {
   else op->size = 16;
 }
 
+static void op_step_in_bang(op_step_t *op) {
+  op_step_in_step(op, 1.0);
+}
+
 static void op_step_in_step(op_step_t* op, float v) {
+  op->step = v;
   s8 i;
 
   if(op->s_cut == 0) {
@@ -142,11 +149,18 @@ static void op_step_in_step(op_step_t* op, float v) {
   op->s_cut = 0;
   op->s_cut2 = 0;
 
-  outlet_float(op->a, (float)op->steps[0][op->s_now]);
-  outlet_float(op->b, (float)op->steps[1][op->s_now]);
-  outlet_float(op->c, (float)op->steps[2][op->s_now]);
-  outlet_float(op->d, (float)op->steps[3][op->s_now]);
-
+  if(op->steps[0][op->s_now]) {
+    outlet_bang(op->a);
+  }
+  if(op->steps[1][op->s_now]) {
+    outlet_bang(op->b);
+  }
+  if(op->steps[2][op->s_now]) {
+    outlet_bang(op->c);
+  }
+  if(op->steps[3][op->s_now]) {
+    outlet_bang(op->d);
+  }
   i = (op->steps[0][op->s_now]) + (op->steps[1][op->s_now] << 1) + (op->steps[2][op->s_now] << 2) + (op->steps[3][op->s_now] << 3);
   outlet_float(op->mono1, (float) i);
   outlet_float(op->pos1, (float) op->s_now);

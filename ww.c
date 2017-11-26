@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 //// network inputs:
-static void op_ww_in_clock(op_ww_t* grid, float f);
+static void op_ww_in_bang(op_ww_t* grid);
 static void op_ww_in_param(op_ww_t* grid, float f);
 
 // polled-operator handler
@@ -78,8 +78,7 @@ void ww_setup (void) {
   /* class_addmethod(op_ww_class, */
   /*		  (t_method)op_ww_in_size, gensym("size"), A_DEFFLOAT, 0); */
   // input func pointer array
-  class_addmethod(op_ww_class,
-		  (t_method)op_ww_in_clock, gensym("clock"), A_DEFFLOAT, 0);
+  class_addbang(op_ww_class, (t_method)op_ww_in_bang);
   class_addmethod(op_ww_class,
 		  (t_method)op_ww_in_param, gensym("param"), A_DEFFLOAT, 0);
 }
@@ -91,10 +90,10 @@ void *ww_new(t_symbol *s, int argc, t_atom *argv) {
   u8 i1,i2;
   op_ww_t *op = (op_ww_t *)pd_new(op_ww_class);
 
-  op->tr0 = outlet_new((t_object *) op, &s_float);
-  op->tr1 = outlet_new((t_object *) op, &s_float);
-  op->tr2 = outlet_new((t_object *) op, &s_float);
-  op->tr3 = outlet_new((t_object *) op, &s_float);
+  op->tr0 = outlet_new((t_object *) op, &s_bang);
+  op->tr1 = outlet_new((t_object *) op, &s_bang);
+  op->tr2 = outlet_new((t_object *) op, &s_bang);
+  op->tr3 = outlet_new((t_object *) op, &s_bang);
   op->cva = outlet_new((t_object *) op, &s_float);
   op->cvb = outlet_new((t_object *) op, &s_float);
   op->pos = outlet_new((t_object *) op, &s_float);
@@ -166,236 +165,222 @@ void ww_free(op_ww_t* op) {
 //----- static function definition
 
 
-static void op_ww_in_clock(op_ww_t* op, float f ) {
+static void op_ww_in_bang(op_ww_t* op ) {
   static u8 i1, count;
   static u16 found[16];
 
-  if(f < 0.0) op->clk = 0;
-  else if(f > 1.0) op->clk = 1;
-  else op->clk = 1;
+  if(op->x.pattern_jump) {
+    op->x.pattern = op->x.next_pattern;
+    op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
+    op->x.pattern_jump = 0;
+  }
+  // for series mode and delayed pattern change
+  if(op->x.series_jump) {
+    op->x.series_pos = op->x.series_next;
+    if(op->x.series_pos == op->w.series_end)
+      op->x.series_next = op->w.series_start;
+    else
+      op->x.series_next++;
 
-  if(op->clk == 1) {
-    if(op->x.pattern_jump) {
-      op->x.pattern = op->x.next_pattern;
-      op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
-      op->x.pattern_jump = 0;
+    // print_dbg("\r\nSERIES next ");
+    // print_dbg_ulong(op->x.series_next);
+    // print_dbg(" pos ");
+    // print_dbg_ulong(op->x.series_pos);
+
+    count = 0;
+    for(i1=0;i1<16;i1++) {
+      if((op->w.series_list[op->x.series_pos] >> i1) & 1) {
+	found[count] = i1;
+	count++;
+      }
     }
-    // for series mode and delayed pattern change
-    if(op->x.series_jump) {
-      op->x.series_pos = op->x.series_next;
-      if(op->x.series_pos == op->w.series_end)
-	op->x.series_next = op->w.series_start;
+
+    if(count == 1)
+      op->x.next_pattern = found[0];
+    else {
+
+      op->x.next_pattern = found[rnd()%count];
+    }
+
+    op->x.pattern = op->x.next_pattern;
+    op->x.series_playing = op->x.pattern;
+    if(op->w.wp[op->x.pattern].step_mode == mReverse)
+      op->x.next_pos = op->w.wp[op->x.pattern].loop_end;
+    else
+      op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
+
+    op->x.series_jump = 0;
+    op->x.series_step = 0;
+  }
+
+  op->x.pos = op->x.next_pos;
+
+  // live param record
+  if(op->x.param_accept && op->x.live_in) {
+    op->x.param_dest = &op->w.wp[op->x.pattern].cv_curves[op->x.edit_cv_ch][op->x.pos];
+    op->w.wp[op->x.pattern].cv_curves[op->x.edit_cv_ch][op->x.pos] = op->param;
+  }
+
+  // calc next step
+  if(op->w.wp[op->x.pattern].step_mode == mForward) {     // FORWARD
+    if(op->x.pos == op->w.wp[op->x.pattern].loop_end) op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
+    else if(op->x.pos >= op->x.LENGTH) op->x.next_pos = 0;
+    else op->x.next_pos++;
+    op->x.cut_pos = 0;
+  }
+  else if(op->w.wp[op->x.pattern].step_mode == mReverse) {  // REVERSE
+    if(op->x.pos == op->w.wp[op->x.pattern].loop_start)
+      op->x.next_pos = op->w.wp[op->x.pattern].loop_end;
+    else if(op->x.pos <= 0)
+      op->x.next_pos = op->x.LENGTH;
+    else op->x.next_pos--;
+    op->x.cut_pos = 0;
+  }
+  else if(op->w.wp[op->x.pattern].step_mode == mDrunk) {  // DRUNK
+    op->x.drunk_step += (rnd() % 3) - 1; // -1 to 1
+    if(op->x.drunk_step < -1) op->x.drunk_step = -1;
+    else if(op->x.drunk_step > 1) op->x.drunk_step = 1;
+
+    op->x.next_pos += op->x.drunk_step;
+    if(op->x.next_pos < 0)
+      op->x.next_pos = op->x.LENGTH;
+    else if(op->x.next_pos > op->x.LENGTH)
+      op->x.next_pos = 0;
+    else if(op->w.wp[op->x.pattern].loop_dir == 1 && op->x.next_pos < op->w.wp[op->x.pattern].loop_start)
+      op->x.next_pos = op->w.wp[op->x.pattern].loop_end;
+    else if(op->w.wp[op->x.pattern].loop_dir == 1 && op->x.next_pos > op->w.wp[op->x.pattern].loop_end)
+      op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
+    else if(op->w.wp[op->x.pattern].loop_dir == 2 && op->x.next_pos < op->w.wp[op->x.pattern].loop_start && op->x.next_pos > op->w.wp[op->x.pattern].loop_end) {
+      if(op->x.drunk_step == 1)
+	op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
       else
-	op->x.series_next++;
+	op->x.next_pos = op->w.wp[op->x.pattern].loop_end;
+    }
 
-      // print_dbg("\r\nSERIES next ");
-      // print_dbg_ulong(op->x.series_next);
-      // print_dbg(" pos ");
-      // print_dbg_ulong(op->x.series_pos);
+    op->x.cut_pos = 1;
+  }
+  else if(op->w.wp[op->x.pattern].step_mode == mRandom) { // RANDOM
+    op->x.next_pos = (rnd() % (op->w.wp[op->x.pattern].loop_len + 1)) + op->w.wp[op->x.pattern].loop_start;
+    // print_dbg("\r\nnext pos:");
+    // print_dbg_ulong(op->x.next_pos);
+    if(op->x.next_pos > op->x.LENGTH) op->x.next_pos -= op->x.LENGTH + 1;
+    op->x.cut_pos = 1;
+  }
 
+  // next pattern?
+  if(op->x.pos == op->w.wp[op->x.pattern].loop_end && op->w.wp[op->x.pattern].step_mode == mForward) {
+    if(op->x.edit_mode == mSeries)
+      op->x.series_jump++;
+    else if(op->x.next_pattern != op->x.pattern)
+      op->x.pattern_jump++;
+  }
+  else if(op->x.pos == op->w.wp[op->x.pattern].loop_start && op->w.wp[op->x.pattern].step_mode == mReverse) {
+    if(op->x.edit_mode == mSeries)
+      op->x.series_jump++;
+    else if(op->x.next_pattern != op->x.pattern)
+      op->x.pattern_jump++;
+  }
+  else if(op->x.series_step == op->w.wp[op->x.pattern].loop_len) {
+    op->x.series_jump++;
+  }
+
+  if(op->x.edit_mode == mSeries)
+    op->x.series_step++;
+
+
+  // TRIGGER
+  op->x.triggered = 0;
+  if((rnd() % 255) < op->w.wp[op->x.pattern].step_probs[op->x.pos]) {
+
+    if(op->w.wp[op->x.pattern].step_choice & 1<<op->x.pos) {
       count = 0;
-      for(i1=0;i1<16;i1++) {
-	if((op->w.series_list[op->x.series_pos] >> i1) & 1) {
+      for(i1=0;i1<4;i1++)
+	if(op->w.wp[op->x.pattern].steps[op->x.pos] >> i1 & 1) {
 	  found[count] = i1;
 	  count++;
 	}
-      }
 
-      if(count == 1)
-	op->x.next_pattern = found[0];
-      else {
-
-	op->x.next_pattern = found[rnd()%count];
-      }
-
-      op->x.pattern = op->x.next_pattern;
-      op->x.series_playing = op->x.pattern;
-      if(op->w.wp[op->x.pattern].step_mode == mReverse)
-	op->x.next_pos = op->w.wp[op->x.pattern].loop_end;
+      if(count == 0)
+	op->x.triggered = 0;
+      else if(count == 1)
+	op->x.triggered = 1<<found[0];
       else
-	op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
-
-      op->x.series_jump = 0;
-      op->x.series_step = 0;
+	op->x.triggered = 1<<found[rnd()%count];
+    }
+    else {
+      op->x.triggered = op->w.wp[op->x.pattern].steps[op->x.pos];
     }
 
-    op->x.pos = op->x.next_pos;
-
-    // live param record
-    if(op->x.param_accept && op->x.live_in) {
-      op->x.param_dest = &op->w.wp[op->x.pattern].cv_curves[op->x.edit_cv_ch][op->x.pos];
-      op->w.wp[op->x.pattern].cv_curves[op->x.edit_cv_ch][op->x.pos] = op->param;
-    }
-
-    // calc next step
-    if(op->w.wp[op->x.pattern].step_mode == mForward) {     // FORWARD
-      if(op->x.pos == op->w.wp[op->x.pattern].loop_end) op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
-      else if(op->x.pos >= op->x.LENGTH) op->x.next_pos = 0;
-      else op->x.next_pos++;
-      op->x.cut_pos = 0;
-    }
-    else if(op->w.wp[op->x.pattern].step_mode == mReverse) {  // REVERSE
-      if(op->x.pos == op->w.wp[op->x.pattern].loop_start)
-	op->x.next_pos = op->w.wp[op->x.pattern].loop_end;
-      else if(op->x.pos <= 0)
-	op->x.next_pos = op->x.LENGTH;
-      else op->x.next_pos--;
-      op->x.cut_pos = 0;
-    }
-    else if(op->w.wp[op->x.pattern].step_mode == mDrunk) {  // DRUNK
-      op->x.drunk_step += (rnd() % 3) - 1; // -1 to 1
-      if(op->x.drunk_step < -1) op->x.drunk_step = -1;
-      else if(op->x.drunk_step > 1) op->x.drunk_step = 1;
-
-      op->x.next_pos += op->x.drunk_step;
-      if(op->x.next_pos < 0)
-	op->x.next_pos = op->x.LENGTH;
-      else if(op->x.next_pos > op->x.LENGTH)
-	op->x.next_pos = 0;
-      else if(op->w.wp[op->x.pattern].loop_dir == 1 && op->x.next_pos < op->w.wp[op->x.pattern].loop_start)
-	op->x.next_pos = op->w.wp[op->x.pattern].loop_end;
-      else if(op->w.wp[op->x.pattern].loop_dir == 1 && op->x.next_pos > op->w.wp[op->x.pattern].loop_end)
-	op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
-      else if(op->w.wp[op->x.pattern].loop_dir == 2 && op->x.next_pos < op->w.wp[op->x.pattern].loop_start && op->x.next_pos > op->w.wp[op->x.pattern].loop_end) {
-	if(op->x.drunk_step == 1)
-	  op->x.next_pos = op->w.wp[op->x.pattern].loop_start;
-	else
-	  op->x.next_pos = op->w.wp[op->x.pattern].loop_end;
-      }
-
-      op->x.cut_pos = 1;
-    }
-    else if(op->w.wp[op->x.pattern].step_mode == mRandom) { // RANDOM
-      op->x.next_pos = (rnd() % (op->w.wp[op->x.pattern].loop_len + 1)) + op->w.wp[op->x.pattern].loop_start;
-      // print_dbg("\r\nnext pos:");
-      // print_dbg_ulong(op->x.next_pos);
-      if(op->x.next_pos > op->x.LENGTH) op->x.next_pos -= op->x.LENGTH + 1;
-      op->x.cut_pos = 1;
-    }
-
-    // next pattern?
-    if(op->x.pos == op->w.wp[op->x.pattern].loop_end && op->w.wp[op->x.pattern].step_mode == mForward) {
-      if(op->x.edit_mode == mSeries)
-	op->x.series_jump++;
-      else if(op->x.next_pattern != op->x.pattern)
-	op->x.pattern_jump++;
-    }
-    else if(op->x.pos == op->w.wp[op->x.pattern].loop_start && op->w.wp[op->x.pattern].step_mode == mReverse) {
-      if(op->x.edit_mode == mSeries)
-	op->x.series_jump++;
-      else if(op->x.next_pattern != op->x.pattern)
-	op->x.pattern_jump++;
-    }
-    else if(op->x.series_step == op->w.wp[op->x.pattern].loop_len) {
-      op->x.series_jump++;
-    }
-
-    if(op->x.edit_mode == mSeries)
-      op->x.series_step++;
-
-
-    // TRIGGER
-    op->x.triggered = 0;
-    if((rnd() % 255) < op->w.wp[op->x.pattern].step_probs[op->x.pos]) {
-
-      if(op->w.wp[op->x.pattern].step_choice & 1<<op->x.pos) {
-	count = 0;
-	for(i1=0;i1<4;i1++)
-	  if(op->w.wp[op->x.pattern].steps[op->x.pos] >> i1 & 1) {
-	    found[count] = i1;
-	    count++;
-	  }
-
-	if(count == 0)
-	  op->x.triggered = 0;
-	else if(count == 1)
-	  op->x.triggered = 1<<found[0];
-	else
-	  op->x.triggered = 1<<found[rnd()%count];
-      }
-      else {
-	op->x.triggered = op->w.wp[op->x.pattern].steps[op->x.pos];
-      }
-
-      if(op->w.wp[op->x.pattern].tr_mode == 0) {
-	if(op->x.triggered & 0x1 && op->w.tr_mute[0]) op->x.tr[0] = 1;
-	if(op->x.triggered & 0x2 && op->w.tr_mute[1]) op->x.tr[1] = 1;
-	if(op->x.triggered & 0x4 && op->w.tr_mute[2]) op->x.tr[2] = 1;
-	if(op->x.triggered & 0x8 && op->w.tr_mute[3]) op->x.tr[3] = 1;
-      } else {
-	if(op->w.tr_mute[0]) {
-	  if(op->x.triggered & 0x1) op->x.tr[0] = 1;
-	  else op->x.tr[0] = 0;
-	}
-	if(op->w.tr_mute[1]) {
-	  if(op->x.triggered & 0x2) op->x.tr[1] = 1;
-	  else op->x.tr[1] = 0;
-	}
-	if(op->w.tr_mute[2]) {
-	  if(op->x.triggered & 0x4) op->x.tr[2] = 1;
-	  else op->x.tr[2] = 0;
-	}
-	if(op->w.tr_mute[3]) {
-	  if(op->x.triggered & 0x8) op->x.tr[3] = 1;
-	  else op->x.tr[3] = 0;
-	}
-
-      }
-    }
-
-    op->x.dirty++;
-
-
-    // PARAM 0
-    if((rnd() % 255) < op->w.wp[op->x.pattern].cv_probs[0][op->x.pos] && op->w.cv_mute[0]) {
-      if(op->w.wp[op->x.pattern].cv_mode[0] == 0) {
-	op->x.cv0 = op->w.wp[op->x.pattern].cv_curves[0][op->x.pos];
-      }
-      else {
-	count = 0;
-	for(i1=0;i1<16;i1++)
-	  if(op->w.wp[op->x.pattern].cv_steps[0][op->x.pos] & (1<<i1)) {
-	    found[count] = i1;
-	    count++;
-	  }
-	if(count == 1)
-	  op->x.cv_chosen[0] = found[0];
-	else
-	  op->x.cv_chosen[0] = found[rnd() % count];
-	op->x.cv0 = op->w.wp[op->x.pattern].cv_values[op->x.cv_chosen[0]];
-      }
-    }
-
-    // PARAM 1
-    if((rnd() % 255) < op->w.wp[op->x.pattern].cv_probs[1][op->x.pos] && op->w.cv_mute[1]) {
-      if(op->w.wp[op->x.pattern].cv_mode[1] == 0) {
-	op->x.cv1 = op->w.wp[op->x.pattern].cv_curves[1][op->x.pos];
-      }
-      else {
-	count = 0;
-	for(i1=0;i1<16;i1++)
-	  if(op->w.wp[op->x.pattern].cv_steps[1][op->x.pos] & (1<<i1)) {
-	    found[count] = i1;
-	    count++;
-	  }
-	if(count == 1)
-	  op->x.cv_chosen[1] = found[0];
-	else
-	  op->x.cv_chosen[1] = found[rnd() % count];
-
-	op->x.cv1 = op->w.wp[op->x.pattern].cv_values[op->x.cv_chosen[1]];
-      }
-    }
-
-  }
-  else {
     if(op->w.wp[op->x.pattern].tr_mode == 0) {
-      op->x.tr[0] = 0;
-      op->x.tr[1] = 0;
-      op->x.tr[2] = 0;
-      op->x.tr[3] = 0;
+      if(op->x.triggered & 0x1 && op->w.tr_mute[0]) op->x.tr[0] = 1;
+      if(op->x.triggered & 0x2 && op->w.tr_mute[1]) op->x.tr[1] = 1;
+      if(op->x.triggered & 0x4 && op->w.tr_mute[2]) op->x.tr[2] = 1;
+      if(op->x.triggered & 0x8 && op->w.tr_mute[3]) op->x.tr[3] = 1;
+    } else {
+      if(op->w.tr_mute[0]) {
+	if(op->x.triggered & 0x1) op->x.tr[0] = 1;
+	else op->x.tr[0] = 0;
+      }
+      if(op->w.tr_mute[1]) {
+	if(op->x.triggered & 0x2) op->x.tr[1] = 1;
+	else op->x.tr[1] = 0;
+      }
+      if(op->w.tr_mute[2]) {
+	if(op->x.triggered & 0x4) op->x.tr[2] = 1;
+	else op->x.tr[2] = 0;
+      }
+      if(op->w.tr_mute[3]) {
+	if(op->x.triggered & 0x8) op->x.tr[3] = 1;
+	else op->x.tr[3] = 0;
+      }
+
     }
   }
+
+  op->x.dirty++;
+
+
+  // PARAM 0
+  if((rnd() % 255) < op->w.wp[op->x.pattern].cv_probs[0][op->x.pos] && op->w.cv_mute[0]) {
+    if(op->w.wp[op->x.pattern].cv_mode[0] == 0) {
+      op->x.cv0 = op->w.wp[op->x.pattern].cv_curves[0][op->x.pos];
+    }
+    else {
+      count = 0;
+      for(i1=0;i1<16;i1++)
+	if(op->w.wp[op->x.pattern].cv_steps[0][op->x.pos] & (1<<i1)) {
+	  found[count] = i1;
+	  count++;
+	}
+      if(count == 1)
+	op->x.cv_chosen[0] = found[0];
+      else
+	op->x.cv_chosen[0] = found[rnd() % count];
+      op->x.cv0 = op->w.wp[op->x.pattern].cv_values[op->x.cv_chosen[0]];
+    }
+  }
+
+  // PARAM 1
+  if((rnd() % 255) < op->w.wp[op->x.pattern].cv_probs[1][op->x.pos] && op->w.cv_mute[1]) {
+    if(op->w.wp[op->x.pattern].cv_mode[1] == 0) {
+      op->x.cv1 = op->w.wp[op->x.pattern].cv_curves[1][op->x.pos];
+    }
+    else {
+      count = 0;
+      for(i1=0;i1<16;i1++)
+	if(op->w.wp[op->x.pattern].cv_steps[1][op->x.pos] & (1<<i1)) {
+	  found[count] = i1;
+	  count++;
+	}
+      if(count == 1)
+	op->x.cv_chosen[1] = found[0];
+      else
+	op->x.cv_chosen[1] = found[rnd() % count];
+
+      op->x.cv1 = op->w.wp[op->x.pattern].cv_values[op->x.cv_chosen[1]];
+    }
+  }
+
 
 
   // cv is a 'continuous quantity' - so output CV *every* bang, also
@@ -403,10 +388,10 @@ static void op_ww_in_clock(op_ww_t* op, float f ) {
   outlet_float(op->cva, (float)op->x.cv0);
   outlet_float(op->cvb, (float)op->x.cv1);
 
-  if(op->x.tr[0]) outlet_float(op->tr0, 1.0);
-  if(op->x.tr[1]) outlet_float(op->tr1, 1.0);
-  if(op->x.tr[2]) outlet_float(op->tr2, 1.0);
-  if(op->x.tr[3]) outlet_float(op->tr3, 1.0);
+  if(op->x.tr[0]) outlet_bang(op->tr0);
+  if(op->x.tr[1]) outlet_bang(op->tr1);
+  if(op->x.tr[2]) outlet_bang(op->tr2);
+  if(op->x.tr[3]) outlet_bang(op->tr3);
   op->x.tr[0] = 0;
   op->x.tr[1] = 0;
   op->x.tr[2] = 0;

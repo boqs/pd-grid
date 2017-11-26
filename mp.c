@@ -80,7 +80,7 @@ void *mp_new(t_symbol *s, int argc, t_atom *argv) {
 
   int i;
   for(i=0; i < 8; i++) {
-    op->outs[i] = outlet_new((t_object *) op, &s_float);
+    op->outs[i] = outlet_new((t_object *) op, &s_bang);
   }
 
   op->key_count = 0;
@@ -149,7 +149,7 @@ static void op_mp_in_step(op_mp_t* op, float f) {
 
     // send out
     if(op->triggers[i]) {
-      outlet_float(op->outs[i], 1.0);
+      outlet_bang(op->outs[i]);
     }
   }
 

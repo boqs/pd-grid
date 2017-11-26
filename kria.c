@@ -1,7 +1,7 @@
 #include "kria.h"
 
 //// network inputs:
-static void op_kria_in_clock(op_kria_t* grid, float f);
+static void op_kria_in_clock(op_kria_t* grid);
 static void op_kria_in_octave(op_kria_t* grid, float f);
 static void op_kria_in_tuning(op_kria_t* grid, float f);
 
@@ -131,8 +131,7 @@ void kria_setup (void) {
 			  CLASS_DEFAULT,
 			  A_GIMME, 0);
   net_monome_add_focus_methods(op_kria_class);
-  class_addmethod(op_kria_class,
-		  (t_method)op_kria_in_clock, gensym("clock"), A_DEFFLOAT, 0);
+  class_addbang(op_kria_class, (t_method)op_kria_in_clock);
   class_addmethod(op_kria_class,
 		  (t_method)op_kria_in_octave, gensym("octave"), A_DEFFLOAT, 0);
   class_addmethod(op_kria_class,
@@ -295,8 +294,7 @@ static void op_kria_in_tuning(op_kria_t* op, float f) {
   op->tuning = f;
 }
 
-static void op_kria_in_clock(op_kria_t* op, float f) {
-  op->clk = f;
+static void op_kria_in_clock(op_kria_t* op) {
   op_kria_track_tick(op, 0);
   op_kria_track_tick(op, 1);
   if(tr[0]) {
