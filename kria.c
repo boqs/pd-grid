@@ -123,13 +123,15 @@ static void phase_reset1(op_kria_t *kria) {
 
 static t_class *op_kria_class;
 void *kria_new(t_symbol *s, int argc, t_atom *argv);
+void kria_free(op_kria_t* op);
 void kria_setup (void) {
   net_monome_setup();
   op_kria_class = class_new(gensym("kria"),
-			  (t_newmethod)kria_new,
-			  0, sizeof(op_kria_t),
-			  CLASS_DEFAULT,
-			  A_GIMME, 0);
+			    (t_newmethod)kria_new,
+			    (t_method)kria_free,
+			    sizeof(op_kria_t),
+			    CLASS_DEFAULT,
+			    A_GIMME, 0);
   net_monome_add_focus_methods(op_kria_class);
   class_addbang(op_kria_class, (t_method)op_kria_in_clock);
   class_addmethod(op_kria_class,

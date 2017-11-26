@@ -1,0 +1,19 @@
+#N canvas 0 47 1364 719 10;
+#X obj 102 148 kria 0 0 0 0;
+#X msg 91 53 focus;
+#X floatatom 70 184 5 0 0 0 - - -, f 5;
+#X obj 133 41 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 152 75 metro 120;
+#X msg 157 48 stop;
+#X floatatom 143 189 5 0 0 0 - - -, f 5;
+#X floatatom 105 190 5 0 0 0 - - -, f 5;
+#X floatatom 192 192 5 0 0 0 - - -, f 5;
+#X connect 0 0 2 0;
+#X connect 0 1 7 0;
+#X connect 0 2 6 0;
+#X connect 0 3 8 0;
+#X connect 1 0 0 0;
+#X connect 3 0 4 0;
+#X connect 4 0 0 0;
+#X connect 5 0 4 0;

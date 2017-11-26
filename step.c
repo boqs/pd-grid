@@ -7,11 +7,13 @@ static void op_step_in_size(op_step_t* op, float v);
 
 static t_class *op_step_class;
 void *step_new(t_symbol *s, int argc, t_atom *argv);
+void step_free(void* op);
 void step_setup (void) {
   net_monome_setup();
   op_step_class = class_new(gensym("step"),
 			    (t_newmethod)step_new,
-			    0, sizeof(op_step_t),
+			    (t_method)step_free,
+			    sizeof(op_step_t),
 			    CLASS_DEFAULT,
 			    A_GIMME, 0);
   class_addbang(op_step_class, (t_method)op_step_in_bang);
@@ -81,7 +83,7 @@ void *step_new(t_symbol *s, int argc, t_atom *argv) {
 }
 
 // de-init
-void op_step_free(void* op) {
+void step_free(void* op) {
   // release focus
   net_monome_deinit((t_monome*)op);
 }

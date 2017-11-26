@@ -42,21 +42,21 @@ void *grid_new(t_symbol *s, int argc, t_atom *argv) {
 
   return (void *)grid_obj;  
 }
-
+static void grid_free(void* op);
 void grid_setup(void) {
   net_monome_setup();
   grid_class = class_new(gensym("grid"),  
-			    (t_newmethod)grid_new,  
-			    0, sizeof(t_grid),  
-			    CLASS_DEFAULT,  
-			    A_GIMME, 0);  
+			 (t_newmethod)grid_new,
+			 (t_method)grid_free, sizeof(t_grid),
+			 CLASS_DEFAULT,
+			 A_GIMME, 0);
   net_monome_add_focus_methods(grid_class);
   class_addmethod(grid_class,  
 		  (t_method)grid_led, gensym("led"),  
-		  A_DEFFLOAT, A_DEFFLOAT, A_DEFFLOAT, 0);  
+		  A_DEFFLOAT, A_DEFFLOAT, A_DEFFLOAT, 0);
 }
 
-void grid_free(void* op) {
+static void grid_free(void* op) {
   // release focus
   net_monome_deinit((t_monome*)op);
 }

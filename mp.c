@@ -56,11 +56,13 @@ void cascades_copy_init_s(s8 *dest, s8 *src) {
 
 static t_class *op_mp_class;
 void *mp_new(t_symbol *s, int argc, t_atom *argv);
+void mp_free(void* op);
 void mp_setup (void) {
   net_monome_setup();
   op_mp_class = class_new(gensym("mp"),
 			  (t_newmethod)mp_new,
-			  0, sizeof(op_mp_t),
+			  (t_method)mp_free,
+			  sizeof(op_mp_t),
 			  CLASS_DEFAULT,
 			  A_GIMME, 0);
   net_monome_add_focus_methods(op_mp_class);
@@ -113,7 +115,7 @@ void *mp_new(t_symbol *s, int argc, t_atom *argv) {
 }
 
 // de-init
-void op_mp_free(void* op) {
+void mp_free(void* op) {
   // release focus
   net_monome_deinit((t_monome *) op);
 }

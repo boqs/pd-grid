@@ -67,11 +67,12 @@ static void ww_refresh(t_monome *op_monome);
 //----- extern function definition
 static t_class *op_ww_class;
 void *ww_new(t_symbol *s, int argc, t_atom *argv);
+void ww_free(op_ww_t* op);
 void ww_setup (void) {
   net_monome_setup();
   op_ww_class = class_new(gensym("ww"),
 			  (t_newmethod)ww_new,
-			  0, sizeof(op_ww_t),
+			  (t_method)ww_free, sizeof(op_ww_t),
 			  CLASS_DEFAULT,
 			  A_GIMME, 0);
   net_monome_add_focus_methods(op_ww_class);
