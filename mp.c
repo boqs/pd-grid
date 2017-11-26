@@ -1,8 +1,4 @@
-// asf
-#include "print_funcs.h"
-// bees
-#include "net_protected.h"
-#include "op_cascades.h"
+#include "mp.h"
 
 // LED intensity levels
 #define L2 15
@@ -11,42 +7,17 @@
 
 
 
-//-------------------------------------------------
-//----- static variables
-
-//---- descriptor strings
-static const char* op_cascades_instring = "FOCUS\0  SIZE\0   STEP\0   ";
-static const char* op_cascades_outstring ="OUT0\0   OUT1\0   OUT2\0   OUT3\0   OUT4\0   OUT5\0   OUT6\0   OUT7\0   ";
-static const char* op_cascades_opstring = "MP";
-
-//-------------------------------------------------
-//----- static function declaration
-
-//---- input functions
-
-//// network inputs: 
-static void op_cascades_in_focus(op_cascades_t* grid, const io_t val);
-static void op_cascades_in_size(op_cascades_t* grid, const io_t val);
-static void op_cascades_in_step(op_cascades_t* grid, const io_t val);
-
-// pickles
-static u8* op_cascades_pickle(op_cascades_t* enc, u8* dst);
-static const u8* op_cascades_unpickle(op_cascades_t* enc, const u8* src);
+static void op_mp_in_step(op_mp_t* op, float f);
+static void op_mp_in_size(op_mp_t* op, float f);
 
 /// monome event handler
-static void op_cascades_handler(op_monome_t* op_monome, u32 data);
+static void op_mp_handler(t_monome* op_monome, u8 x, u8 y, u8 z);
 
-static void op_cascades_redraw(op_monome_t* op_monome);
-static void op_cascades_trigger(op_cascades_t* op_monome, u8 n);
+static void op_mp_redraw(t_monome* op_monome);
+static void op_mp_trigger(op_mp_t* op_monome, u8 n);
 
 static u32 rnd(void);
 
-// input func pointer array
-static op_in_fn op_cascades_in_fn[3] = {
-  (op_in_fn)&op_cascades_in_focus,
-  (op_in_fn)&op_cascades_in_size,
-  (op_in_fn)&op_cascades_in_step,
-};
 
 
 const u8 glyph[8][8] = {{0,0,0,0,0,0,0,0},         // o
@@ -82,60 +53,43 @@ void cascades_copy_init_s(s8 *dest, s8 *src) {
     dest[i] = src[i];
   }
 }
-//-------------------------------------------------
-//----- extern function definition
-void op_cascades_init(void* mem) {
-  //  print_dbg("\r\n op_cascades_init ");
-  op_cascades_t* op = (op_cascades_t*)mem;
 
-  // superclass functions
-  //--- op
-  op->super.in_fn = op_cascades_in_fn;
-  op->super.pickle = (op_pickle_fn) (&op_cascades_pickle);
-  op->super.unpickle = (op_unpickle_fn) (&op_cascades_unpickle);
+static t_class *op_mp_class;
+void *mp_new(t_symbol *s, int argc, t_atom *argv);
+void mp_setup (void) {
+  net_monome_setup();
+  op_mp_class = class_new(gensym("mp"),
+			  (t_newmethod)mp_new,
+			  0, sizeof(op_mp_t),
+			  CLASS_DEFAULT,
+			  A_GIMME, 0);
+  net_monome_add_focus_methods(op_mp_class);
+  class_addbang(op_mp_class, (t_method)op_mp_in_step);
+  class_addmethod(op_mp_class,
+		  (t_method)op_mp_in_size, gensym("size"), A_DEFFLOAT, 0);
+  /* class_sethelpsymbol(counter_class, gensym("help-counter"));   */
+}
 
-  //--- monome
-  op->monome.handler = (monome_handler_t)&op_cascades_handler;
-  net_monome_init(&op->monome, op);
+void *mp_new(t_symbol *s, int argc, t_atom *argv) {
+  (void) s;
+  (void) argc;
+  (void) argv;
+  op_mp_t *op = (op_mp_t *)pd_new(op_mp_class);
 
-  // superclass state
+  net_monome_init(&op->monome, (monome_handler_t)&op_mp_handler);
 
-  op->super.type = eOpCascades;
-  op->super.flags |= (1 << eOpFlagMonomeGrid);
+  int i;
+  for(i=0; i < 8; i++) {
+    op->outs[i] = outlet_new((t_object *) op, &s_float);
+  }
 
-  op->super.numInputs = 3;
-  op->super.numOutputs = 8;
-
-  op->super.in_val = op->in_val;
-  op->super.out = op->outs;
-
-  op->super.opString = op_cascades_opstring;
-  op->super.inString = op_cascades_instring;
-  op->super.outString = op_cascades_outstring;
-
-  op->in_val[0] = &(op->focus);
-  op->monome.focus = &(op->focus);
-  op->in_val[1] = &(op->size);  
-  ///////////////////
-  // FIXME
-  op->in_val[2] = &(op->dummy);  
-  ////////////////////
-
-  op->outs[0] = -1;
-  op->outs[1] = -1;
-  op->outs[2] = -1;
-  op->outs[3] = -1;
-  op->outs[4] = -1;
-  op->outs[5] = -1;
-  op->outs[6] = -1;
-  op->outs[7] = -1;
   op->key_count = 0;
   op->mode = 0;
   op->prev_mode = 0;
 
   op->edit_row = op->key_count = op->mode = op->prev_mode = 0;
 
-  op->size = monome_size_x();
+  op->size = net_monome_size_x();
   op->dummy = 0;
 
   s8 positions_init[8] = {3,1,2,2,3,3,5,7};
@@ -153,44 +107,30 @@ void op_cascades_init(void* mem) {
   u8 rules_dests_init[8] = {0,1,2,3,4,5,6,7};
   cascades_copy_init_u(op->rule_dests, rules_dests_init);
 
-  op->focus = OP_ONE;
-  if(!recallingScene) {
-    net_monome_set_focus(&(op->monome), 1);
-  }
-
   // init monome drawing
-  op_cascades_redraw(&(op->monome));
+  op_mp_redraw(&(op->monome));
+  return op;
 }
 
 // de-init
-void op_cascades_deinit(void* op) {
+void op_mp_free(void* op) {
   // release focus
-  net_monome_set_focus(&(((op_cascades_t*)op)->monome), 0);
+  net_monome_deinit((t_monome *) op);
 }
 
 //-------------------------------------------------
 //----- static function definition
 
-//--- network input functions
-static void op_cascades_in_focus(op_cascades_t* op, const io_t v) {
-  if((v) > 0) {
-    op->focus = OP_ONE;
-  } else {
-    // if(op->focus>0) { net_monome_grid_clear(); }
-    op->focus = 0;
-  }
-  net_monome_set_focus( &(op->monome), op->focus > 0);
-}
-
-static void op_cascades_in_size(op_cascades_t* op, const io_t v) {
-  if(v < 9) op->size = 8;
+static void op_mp_in_size(op_mp_t* op, float f) {
+  if(f < 9.0) op->size = 8;
   else op->size = 16;
 
   // FIXME: auto-detect size, this doesn't get set in unpickling
   op->XSIZE = op->size;
 }
 
-static void op_cascades_in_step(op_cascades_t* op, const io_t v) {
+static void op_mp_in_step(op_mp_t* op, float f) {
+  (void) f;
   u8 i;
 
   // clear last round
@@ -198,7 +138,7 @@ static void op_cascades_in_step(op_cascades_t* op, const io_t v) {
     op->triggers[i] = 0;
 
   // main
-  op_cascades_trigger(op, 0);
+  op_mp_trigger(op, 0);
 
   // ensure bounds, output triggers
   for(i=0;i<8;i++) {
@@ -209,14 +149,14 @@ static void op_cascades_in_step(op_cascades_t* op, const io_t v) {
 
     // send out
     if(op->triggers[i]) {
-      net_activate(op, i, 1);
+      outlet_float(op->outs[i], 1.0);
     }
   }
 
-  op_cascades_redraw(&op->monome);
+  op_mp_redraw(&op->monome);
 }
 
-static void op_cascades_trigger(op_cascades_t *op, u8 n) {
+static void op_mp_trigger(op_mp_t *op, u8 n) {
   u8 m;
 
   op->positions[n]--;
@@ -249,9 +189,6 @@ static void op_cascades_trigger(op_cascades_t *op, u8 n) {
     else if(op->rules[n] == 5) {  // rnd
       op->points[op->rule_dests[n]] = rnd() % op->XSIZE;
       
-      print_dbg("\r\n op_cascades >>>>>>>>>>>>>>>>>>>> RANDOM: ");
-      print_dbg_hex(op->points[op->rule_dests[n]]);
-      // print_dbg_hex(rnd() % 11);
 
       op->positions[op->rule_dests[n]] = op->points[op->rule_dests[n]];
     }
@@ -263,10 +200,8 @@ static void op_cascades_trigger(op_cascades_t *op, u8 n) {
       if(op->points[op->rule_dests[n]] < 0) op->points[op->rule_dests[n]] = 0;
       else if(op->points[op->rule_dests[n]] > (op->XSIZE-1)) op->points[op->rule_dests[n]] = op->XSIZE-1;
       op->positions[op->rule_dests[n]] = op->points[op->rule_dests[n]];  
-
-      print_dbg("\r\n op_cascades >>>>>>>>>>>>>>>>>>>> WANDER: ");
-      print_dbg_hex(op->points[op->rule_dests[n]]);   
-    }
+ 
+   }
     else if(op->rules[n] == 7) {  // return
       op->points[op->rule_dests[n]] = op->points_save[op->rule_dests[n]];
     }
@@ -278,20 +213,16 @@ static void op_cascades_trigger(op_cascades_t *op, u8 n) {
     //triggers
     for(m=0;m<8;m++)
       if((op->trig_dests[n] & (1<<m)) != 0)
-        op_cascades_trigger(op, m);
+        op_mp_trigger(op, m);
         // post("\ntrigger",n," -> ", m);
   }
 }
 
 // process monome key input
-static void op_cascades_handler(op_monome_t* op_monome, u32 edata) {
-  op_cascades_t *op = (op_cascades_t *) op_monome->op;
-  static u8 x, y, z;
+static void op_mp_handler(t_monome* op_monome, u8 x, u8 y, u8 z) {
+  op_mp_t *op = (op_mp_t *) op_monome;
   u8 dirty_grid = 0;
 
-  // op_cascades_t* op = (op_cascades_t*)(op_monome->op);
-
-  monome_grid_key_parse_event_data(edata, &x, &y, &z);
 
   op->prev_mode = op->mode;
 
@@ -348,13 +279,13 @@ static void op_cascades_handler(op_monome_t* op_monome, u32 edata) {
   }
 
   if(dirty_grid)
-    op_cascades_redraw(op_monome);
+    op_mp_redraw(op_monome);
 
 }
 
 // redraw monome grid
-static void op_cascades_redraw(op_monome_t* op_monome) {
-  op_cascades_t *op = (op_cascades_t *) op_monome->op;
+static void op_mp_redraw(t_monome* op_monome) {
+  op_mp_t *op = (op_mp_t *) op_monome;
   u8 i1, i2, i3;
 
   // clear grid
@@ -408,8 +339,6 @@ static void op_cascades_redraw(op_monome_t* op_monome) {
     op_monome->opLedBuffer[op->rules[op->edit_row] * 16 + 7] = L2;
   }
 
-  monome_set_quadrant_flag(0);
-  monome_set_quadrant_flag(1);
 }
 
 
@@ -422,30 +351,30 @@ static u32 rnd() {
 
 
 
-// pickle / unpickle
-u8* op_cascades_pickle(op_cascades_t* mgrid, u8* dst) {
-  dst = pickle_io(mgrid->focus, dst);
-  dst = pickle_io(mgrid->size, dst);
-  u32 *mp_state = (u32*)mgrid->positions;
-  while ((u8*)mp_state < (u8*) &(mgrid->edit_row)) {
-    dst = pickle_32(*mp_state, dst);
-    mp_state +=1;
-  }
-  /// no state...???
-  return dst;
-}
+/* // pickle / unpickle */
+/* u8* op_mp_pickle(op_mp_t* mgrid, u8* dst) { */
+/*   dst = pickle_io(mgrid->focus, dst); */
+/*   dst = pickle_io(mgrid->size, dst); */
+/*   u32 *mp_state = (u32*)mgrid->positions; */
+/*   while ((u8*)mp_state < (u8*) &(mgrid->edit_row)) { */
+/*     dst = pickle_32(*mp_state, dst); */
+/*     mp_state +=1; */
+/*   } */
+/*   /// no state...??? */
+/*   return dst; */
+/* } */
 
-const u8* op_cascades_unpickle(op_cascades_t* mgrid, const u8* src) {
-  src = unpickle_io(src, (u32*)&(mgrid->focus));
-  // FIXME should probably auto-detect grid size here::::
-  src = unpickle_io(src, (u32*)&(mgrid->size));
-  u32 *mp_state = (u32*)mgrid->positions;
-  while ((u8*)mp_state < (u8*) &(mgrid->edit_row)) {
-    src = unpickle_32(src, mp_state);
-    mp_state +=1;
-  }
-  if(mgrid->focus > 0) {
-    net_monome_set_focus( &(mgrid->monome), 1);
-  }
-  return src;
-}
+/* const u8* op_mp_unpickle(op_mp_t* mgrid, const u8* src) { */
+/*   src = unpickle_io(src, (u32*)&(mgrid->focus)); */
+/*   // FIXME should probably auto-detect grid size here:::: */
+/*   src = unpickle_io(src, (u32*)&(mgrid->size)); */
+/*   u32 *mp_state = (u32*)mgrid->positions; */
+/*   while ((u8*)mp_state < (u8*) &(mgrid->edit_row)) { */
+/*     src = unpickle_32(src, mp_state); */
+/*     mp_state +=1; */
+/*   } */
+/*   if(mgrid->focus > 0) { */
+/*     net_monome_set_focus( &(mgrid->monome), 1); */
+/*   } */
+/*   return src; */
+/* } */

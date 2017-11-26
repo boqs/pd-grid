@@ -5,7 +5,8 @@ lib.name = grid
 class.sources = grid.c\
 	step.c \
 	ww.c \
-	kria.c
+	kria.c \
+	mp.c
 
 PDINCLUDEDIR=/usr/local/include/pd
 
