@@ -23,4 +23,7 @@ tags:
 	find . ~/git_checkouts/pure-data -name '*.[ch]' | etags -
 
 test:
-	cp grid.pd_linux ~/pd-externals; pd grid-example.pd
+	cp *.pd_linux ~/pd-externals; pd grid-example.pd
+
+local-install:
+	cp *.pd_linux ~/pd-externals
