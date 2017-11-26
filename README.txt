@@ -3,8 +3,9 @@ only 128 grids, but should be fairly easy to extend to other monome
 grids
 
 build dependencies are pd vanilla & liblo for OSC support.  You will
-also need serialosc & a monome (or serialosc-compatible)
-https://github.com/monome/serialosc
+also need serialosc & a monome https://github.com/monome/serialosc (or
+grid device with serialosc-compatible controller e.g
+https://github.com/lazzarello/monome-apc40 )
 
 type make to build several externals:
 
@@ -14,9 +15,9 @@ type make to build several externals:
 - step.pd_linux
 - ww.pd_linux
 
-if the build doesn't work you might need to set PDINCLUDEDIR to
-wherever pd is installed on your system.  My machine is arch linux, so
-manually compiled programs end up in /usr/local.
+if the build doesn't work you might need to edit the Makefile set
+PDINCLUDEDIR to wherever pd is installed on your system My machine is
+arch linux, so manually compiled programs end up in /usr/local.
 
 copy these .pd_linux files (or .pd_whatever if you're on a different
 OS) to your pd-externals directory.
