@@ -167,20 +167,12 @@ static void op_step_in_step(op_step_t* op, float v) {
     }
   }
   i = (op->steps[0][op->s_now]) + (op->steps[1][op->s_now] << 1) + (op->steps[2][op->s_now] << 2) + (op->steps[3][op->s_now] << 3);
-  stepOut[0].a_w.w_float = 0.0;
-  stepOut[1].a_w.w_float = (float) i;
-  outlet_list(op->mono, &s_list, 2, stepOut);
-
-  stepOut[0].a_w.w_float = 0.0;
-  stepOut[1].a_w.w_float = (float) op->s_now;
-  outlet_list(op->pos, &s_list, 2, stepOut);
-
+  stepOut[0].a_w.w_float = (float) i;
   i = (op->steps[0][op->s_now2]) + (op->steps[1][op->s_now2] << 1) + (op->steps[2][op->s_now2] << 2) + (op->steps[3][op->s_now2] << 3);
-  stepOut[0].a_w.w_float = 1.0;
   stepOut[1].a_w.w_float = (float) i;
   outlet_list(op->mono, &s_list, 2, stepOut);
 
-  stepOut[0].a_w.w_float = 1.0;
+  stepOut[0].a_w.w_float = (float) op->s_now;
   stepOut[1].a_w.w_float = (float) op->s_now2;
   outlet_list(op->pos, &s_list, 2, stepOut);
 }

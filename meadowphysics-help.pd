@@ -1,0 +1,39 @@
+#N canvas 0 47 1364 719 10;
+#X msg 37 59 focus;
+#X obj 41 219 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 64 218 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 88 218 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 110 218 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 138 219 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 161 218 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 185 218 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 207 218 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 96 62 metro 100;
+#X obj 99 32 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X msg 127 33 stop;
+#X obj 69 100 meadowphysics;
+#X obj 73 177 route 0 1 2 3 4 5 6 7;
+#X text 177 105 When a counter reaches 0 \, it outputs it's index on
+the outlet.;
+#X connect 0 0 12 0;
+#X connect 9 0 12 0;
+#X connect 10 0 9 0;
+#X connect 11 0 9 0;
+#X connect 12 0 13 0;
+#X connect 13 0 1 0;
+#X connect 13 1 2 0;
+#X connect 13 2 3 0;
+#X connect 13 3 4 0;
+#X connect 13 4 5 0;
+#X connect 13 5 6 0;
+#X connect 13 6 7 0;
+#X connect 13 7 8 0;

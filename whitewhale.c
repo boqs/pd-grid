@@ -387,7 +387,7 @@ static void op_ww_in_bang(op_ww_t* op ) {
   cvOut[1].a_type = A_FLOAT;
   cvOut[0].a_w.w_float = (float)op->x.cv0;
   cvOut[1].a_w.w_float = (float)op->x.cv1;
-  outlet_list(op->cv, &s_list, 3, cvOut);
+  outlet_list(op->cv, &s_list, 2, cvOut);
 
   int i;
   for(i=0; i <  4; i++) {

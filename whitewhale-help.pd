@@ -1,0 +1,46 @@
+#N canvas 0 47 1364 719 10;
+#X msg 207 196 focus;
+#X obj 271 88 vsl 15 128 0 4095 0 0 empty empty empty 0 -9 0 10 -262144
+-1 -1 0 1;
+#X msg 256 233 param \$1;
+#X floatatom 328 235 5 0 0 0 - - -, f 5;
+#X obj 107 152 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 135 225 metro 100;
+#X msg 135 153 stop;
+#X obj 66 380 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 89 379 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X obj 113 379 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 135 379 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144
+-1 -1;
+#X obj 165 300 whitewhale;
+#X obj 69 336 route 0 1 2 3;
+#X floatatom 301 357 5 0 0 0 - - -, f 5;
+#X obj 177 349 unpack f f;
+#X floatatom 178 383 5 0 0 0 - - -, f 5;
+#X floatatom 230 388 5 0 0 0 - - -, f 5;
+#X text 318 141 This fader is set up like the 'param' knob on whitewhale
+front panel;
+#X text 178 408 The two CV outs are sent as a list;
+#X text 306 381 3rd outlet is position;
+#X text 23 406 First outlet sends lists of 2 numbers: channel \, tr-idx
+;
+#X connect 0 0 11 0;
+#X connect 1 0 2 0;
+#X connect 1 0 3 0;
+#X connect 2 0 11 0;
+#X connect 4 0 5 0;
+#X connect 5 0 11 0;
+#X connect 6 0 5 0;
+#X connect 11 0 12 0;
+#X connect 11 1 14 0;
+#X connect 11 2 13 0;
+#X connect 12 0 7 0;
+#X connect 12 1 8 0;
+#X connect 12 2 9 0;
+#X connect 12 3 10 0;
+#X connect 14 0 15 0;
+#X connect 14 1 16 0;

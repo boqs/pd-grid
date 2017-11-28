@@ -1,19 +1,24 @@
 #N canvas 0 47 1364 719 10;
-#X obj 102 148 kria 0 0 0 0;
-#X msg 91 53 focus;
-#X floatatom 70 184 5 0 0 0 - - -, f 5;
-#X obj 133 41 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+#X msg 162 120 focus;
+#X obj 78 76 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
 -1;
-#X obj 152 75 metro 120;
-#X msg 157 48 stop;
-#X floatatom 143 189 5 0 0 0 - - -, f 5;
-#X floatatom 105 190 5 0 0 0 - - -, f 5;
-#X floatatom 192 192 5 0 0 0 - - -, f 5;
-#X connect 0 0 2 0;
-#X connect 0 1 7 0;
-#X connect 0 2 6 0;
-#X connect 0 3 8 0;
-#X connect 1 0 0 0;
-#X connect 3 0 4 0;
-#X connect 4 0 0 0;
-#X connect 5 0 4 0;
+#X obj 97 110 metro 120;
+#X msg 102 83 stop;
+#X obj 125 161 kria;
+#X obj 119 198 unpack f f f;
+#X obj 44 255 print pitch;
+#X obj 126 254 print amp;
+#X obj 195 256 print duration;
+#X text 347 132 Each of Kria's outputs sends 3-float note messages
+representing: pitch \, amplitude \, duration This representation works
+well for interfacing to midi \, allowing to use the makenote object
+to avoid 'stuck notes' Also means you could potentially use fixed note
+duration \, and treat 3rd output as any arbitrary param.;
+#X connect 0 0 4 0;
+#X connect 1 0 2 0;
+#X connect 2 0 4 0;
+#X connect 3 0 2 0;
+#X connect 4 0 5 0;
+#X connect 5 0 6 0;
+#X connect 5 1 7 0;
+#X connect 5 2 8 0;
