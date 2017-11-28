@@ -99,18 +99,12 @@ typedef struct op_ww_struct {
   // inputs: mode, focus, step
   s16 clk;
   s16 param;
-  // outputs: tr0, tr1, tr2, tr3, cva, cvb, pos
-  t_outlet *tr0;
-  t_outlet *tr1;
-  t_outlet *tr2;
-  t_outlet *tr3;
-
-  t_outlet *cva;
-  t_outlet *cvb;
+  // outputs: tr, cv, pos
+  t_outlet *tr;
+  t_outlet *cv;
   t_outlet *pos;
 
-
-    // timer data
+  // timer data
   t_clock *clock;
 
   whale_set w;

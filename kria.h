@@ -56,14 +56,10 @@ typedef struct op_kria_struct {
   s16 octave;
   s16 tuning;
   // outputs: a,b,c,d
-  t_outlet *tr0;
-  t_outlet *note0;
-  t_outlet *tr1;
-  t_outlet *note1;
+  t_outlet *voice0;
+  t_outlet *voice1;
 
   t_clock *clock;
-  t_clock *note0offTimer;
-  t_clock *note1offTimer;
 } op_kria_t;
 
 // init

@@ -1,4 +1,4 @@
-#include "ww.h"
+#include "whitewhale.h"
 #include <stdlib.h>
 
 //// network inputs:
@@ -68,9 +68,9 @@ static void ww_refresh(t_monome *op_monome);
 static t_class *op_ww_class;
 void *ww_new(t_symbol *s, int argc, t_atom *argv);
 void ww_free(op_ww_t* op);
-void ww_setup (void) {
+void whitewhale_setup (void) {
   net_monome_setup();
-  op_ww_class = class_new(gensym("ww"),
+  op_ww_class = class_new(gensym("whitewhale"),
 			  (t_newmethod)ww_new,
 			  (t_method)ww_free, sizeof(op_ww_t),
 			  CLASS_DEFAULT,
@@ -91,12 +91,8 @@ void *ww_new(t_symbol *s, int argc, t_atom *argv) {
   u8 i1,i2;
   op_ww_t *op = (op_ww_t *)pd_new(op_ww_class);
 
-  op->tr0 = outlet_new((t_object *) op, &s_bang);
-  op->tr1 = outlet_new((t_object *) op, &s_bang);
-  op->tr2 = outlet_new((t_object *) op, &s_bang);
-  op->tr3 = outlet_new((t_object *) op, &s_bang);
-  op->cva = outlet_new((t_object *) op, &s_float);
-  op->cvb = outlet_new((t_object *) op, &s_float);
+  op->tr = outlet_new((t_object *) op, &s_float);
+  op->cv = outlet_new((t_object *) op, &s_list);
   op->pos = outlet_new((t_object *) op, &s_float);
 
   net_monome_init(&op->monome, (monome_handler_t)&op_ww_handler);
@@ -386,13 +382,19 @@ static void op_ww_in_bang(op_ww_t* op ) {
 
   // cv is a 'continuous quantity' - so output CV *every* bang, also
   // *before* outputting any triggers
-  outlet_float(op->cva, (float)op->x.cv0);
-  outlet_float(op->cvb, (float)op->x.cv1);
+  t_atom cvOut[2];
+  cvOut[0].a_type = A_FLOAT;
+  cvOut[1].a_type = A_FLOAT;
+  cvOut[0].a_w.w_float = (float)op->x.cv0;
+  cvOut[1].a_w.w_float = (float)op->x.cv1;
+  outlet_list(op->cv, &s_list, 3, cvOut);
 
-  if(op->x.tr[0]) outlet_bang(op->tr0);
-  if(op->x.tr[1]) outlet_bang(op->tr1);
-  if(op->x.tr[2]) outlet_bang(op->tr2);
-  if(op->x.tr[3]) outlet_bang(op->tr3);
+  int i;
+  for(i=0; i <  4; i++) {
+    if(op->x.tr[i]) {
+      outlet_float(op->tr, i);
+    }
+  }
   op->x.tr[0] = 0;
   op->x.tr[1] = 0;
   op->x.tr[2] = 0;

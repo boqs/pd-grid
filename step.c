@@ -32,15 +32,10 @@ void *step_new(t_symbol *s, int argc, t_atom *argv) {
 
   u8 i;
   op_step_t *op = (op_step_t *)pd_new(op_step_class);
-
-  op->a = outlet_new((t_object *) op, &s_bang);
-  op->b = outlet_new((t_object *) op, &s_bang);
-  op->c = outlet_new((t_object *) op, &s_bang);
-  op->d = outlet_new((t_object *) op, &s_bang);
-  op->mono1 = outlet_new((t_object *) op, &s_float);
-  op->pos1 = outlet_new((t_object *) op, &s_float);
-  op->mono2 = outlet_new((t_object *) op, &s_float);
-  op->pos2 = outlet_new((t_object *) op, &s_float);
+  
+  op->tr = outlet_new((t_object *) op, &s_list);
+  op->mono = outlet_new((t_object *) op, &s_list);
+  op->pos = outlet_new((t_object *) op, &s_list);
 
   /* op->super.pickle = (op_pickle_fn) (&op_step_pickle); */
   /* op->super.unpickle = (op_unpickle_fn) (&op_step_unpickle); */
@@ -151,25 +146,43 @@ static void op_step_in_step(op_step_t* op, float v) {
   op->s_cut = 0;
   op->s_cut2 = 0;
 
-  if(op->steps[0][op->s_now]) {
-    outlet_bang(op->a);
+  
+  t_atom stepOut[2];
+  stepOut[0].a_type = A_FLOAT;
+  stepOut[1].a_type = A_FLOAT;
+
+  int k;
+  for(k=0; k < 4; k++) {
+    if(op->steps[k][op->s_now]) {
+      stepOut[0].a_w.w_float = 0.0;
+      stepOut[1].a_w.w_float = (float) k;
+      outlet_list(op->tr, &s_list, 2, stepOut);
+    }
   }
-  if(op->steps[1][op->s_now]) {
-    outlet_bang(op->b);
-  }
-  if(op->steps[2][op->s_now]) {
-    outlet_bang(op->c);
-  }
-  if(op->steps[3][op->s_now]) {
-    outlet_bang(op->d);
+  for(k=0; k < 4; k++) {
+    if(op->steps[k][op->s_now2]) {
+      stepOut[0].a_w.w_float = 1.0;
+      stepOut[1].a_w.w_float = (float) k;
+      outlet_list(op->tr, &s_list, 2, stepOut);
+    }
   }
   i = (op->steps[0][op->s_now]) + (op->steps[1][op->s_now] << 1) + (op->steps[2][op->s_now] << 2) + (op->steps[3][op->s_now] << 3);
-  outlet_float(op->mono1, (float) i);
-  outlet_float(op->pos1, (float) op->s_now);
+  stepOut[0].a_w.w_float = 0.0;
+  stepOut[1].a_w.w_float = (float) i;
+  outlet_list(op->mono, &s_list, 2, stepOut);
+
+  stepOut[0].a_w.w_float = 0.0;
+  stepOut[1].a_w.w_float = (float) op->s_now;
+  outlet_list(op->pos, &s_list, 2, stepOut);
 
   i = (op->steps[0][op->s_now2]) + (op->steps[1][op->s_now2] << 1) + (op->steps[2][op->s_now2] << 2) + (op->steps[3][op->s_now2] << 3);
-  outlet_float(op->mono2, (float) i);
-  outlet_float(op->pos2, (float) op->s_now);
+  stepOut[0].a_w.w_float = 1.0;
+  stepOut[1].a_w.w_float = (float) i;
+  outlet_list(op->mono, &s_list, 2, stepOut);
+
+  stepOut[0].a_w.w_float = 1.0;
+  stepOut[1].a_w.w_float = (float) op->s_now2;
+  outlet_list(op->pos, &s_list, 2, stepOut);
 }
 
 static void op_step_handler(op_step_t *op, u8 x, u8 y, u8 z) {

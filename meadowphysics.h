@@ -27,7 +27,7 @@ typedef struct op_mp_struct {
 
   u8 XSIZE;
 
-  t_outlet *outs[8];
+  t_outlet *out;
 
 } op_mp_t;
 

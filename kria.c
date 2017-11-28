@@ -42,9 +42,6 @@ u8 key_alt, mod1, mod2;
 s8 loop_count;
 u8 loop_edit;
 
-u8 need0off;
-u8 need1off;
-
 u8 cur_scale[2][7];
 
 u8 tr[2];
@@ -70,38 +67,6 @@ static void phase_reset1(op_kria_t *kria);
 
 
 bool kria_next_step(op_kria_t *kria, uint8_t t, uint8_t p);
-
-
-////////////////////////////////////////////////////////////////////////////////
-// timers
-
-/* static softTimer_t clockTimer = { .next = NULL, .prev = NULL }; */
-/* static softTimer_t keyTimer = { .next = NULL, .prev = NULL }; */
-/* static softTimer_t adcTimer = { .next = NULL, .prev = NULL }; */
-/* static softTimer_t monomePollTimer = { .next = NULL, .prev = NULL }; */
-/* static softTimer_t monomeRefreshTimer  = { .next = NULL, .prev = NULL }; */
-
-/* static softTimer_t note0offTimer = { .next = NULL, .prev = NULL }; */
-/* static softTimer_t note1offTimer = { .next = NULL, .prev = NULL }; */
-
-static void note0offTimer_callback(void* o) {
-  op_kria_t *kria = (op_kria_t *) o;
-  if(need0off) {
-    need0off = 0;
-    outlet_float(kria->tr0, 0);
-  }
-}
-
-static void note1offTimer_callback(void* o) {
-  op_kria_t *kria = (op_kria_t *) o;
-  if(need1off) {
-    need1off = 0;
-    outlet_float(kria->tr1, 0);
-  }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-// prototypes
 
 static void kria_refresh(t_monome *op_monome);
 /* static void kria_refresh_mono(t_monome *op_monome); */
@@ -149,10 +114,8 @@ void *kria_new(t_symbol *s, int argc, t_atom *argv) {
   u8 i1,i2;
   op_kria_t *op = (op_kria_t *)pd_new(op_kria_class);
 
-  op->tr0 = outlet_new((t_object *) op, &s_float);
-  op->note0 = outlet_new((t_object *) op, &s_float);
-  op->tr1 = outlet_new((t_object *) op, &s_float);
-  op->note1 = outlet_new((t_object *) op, &s_float);
+  op->voice0 = outlet_new((t_object *) op, &s_list);
+  op->voice1 = outlet_new((t_object *) op, &s_list);
 
   net_monome_init(&op->monome, (monome_handler_t)&op_kria_handler);
 
@@ -203,16 +166,12 @@ void *kria_new(t_symbol *s, int argc, t_atom *argv) {
 
   op->clock = clock_new(op, (t_method) op_kria_poll_handler);
   clock_delay(op->clock,  OP_KRIA_POLL_TIME);
-  op->note0offTimer = clock_new(op, (t_method)note0offTimer_callback);
-  op->note1offTimer = clock_new(op, (t_method)note1offTimer_callback);
   return (void *) op;
 }
 
 // de-init
 void kria_free(op_kria_t* op) {
   net_monome_deinit((t_monome *)op);
-  clock_free(op->note0offTimer);
-  clock_free(op->note1offTimer);
   clock_free(op->clock);
 }
 
@@ -300,17 +259,24 @@ static void op_kria_in_clock(op_kria_t* op) {
   op_kria_track_tick(op, 0);
   op_kria_track_tick(op, 1);
   if(tr[0]) {
-    outlet_float(op->note0, (float) cv[0]);
-    outlet_float(op->tr0, (float) tr[0]);
-    need0off = 1;
-    clock_delay(op->note0offTimer, dur[0]);
-
+    t_atom outNote[3];
+    outNote[0].a_type = A_FLOAT;
+    outNote[0].a_w.w_float = (float) cv[0];
+    outNote[1].a_type = A_FLOAT;
+    outNote[1].a_w.w_float = (float) tr[0];
+    outNote[2].a_type = A_FLOAT;
+    outNote[2].a_w.w_float = (float) dur[0];
+    outlet_list(op->voice0, &s_list, 3, outNote);
   }
   if(tr[1]) {
-    outlet_float(op->note1, (float) cv[1]);
-    outlet_float(op->tr1, (float) tr[1]);
-    need1off = 1;
-    clock_delay(op->note1offTimer, dur[1]);
+    t_atom outNote[3];
+    outNote[0].a_type = A_FLOAT;
+    outNote[0].a_w.w_float = (float) cv[1];
+    outNote[1].a_type = A_FLOAT;
+    outNote[1].a_w.w_float = (float) tr[1];
+    outNote[2].a_type = A_FLOAT;
+    outNote[2].a_w.w_float = (float) dur[1];
+    outlet_list(op->voice1, &s_list, 3, outNote);
   }
   tr[0] = 0;
   tr[1] = 0;

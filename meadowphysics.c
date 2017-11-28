@@ -1,4 +1,4 @@
-#include "mp.h"
+#include "meadowphysics.h"
 
 // LED intensity levels
 #define L2 15
@@ -57,9 +57,9 @@ void cascades_copy_init_s(s8 *dest, s8 *src) {
 static t_class *op_mp_class;
 void *mp_new(t_symbol *s, int argc, t_atom *argv);
 void mp_free(void* op);
-void mp_setup (void) {
+void meadowphysics_setup (void) {
   net_monome_setup();
-  op_mp_class = class_new(gensym("mp"),
+  op_mp_class = class_new(gensym("meadowphysics"),
 			  (t_newmethod)mp_new,
 			  (t_method)mp_free,
 			  sizeof(op_mp_t),
@@ -80,10 +80,7 @@ void *mp_new(t_symbol *s, int argc, t_atom *argv) {
 
   net_monome_init(&op->monome, (monome_handler_t)&op_mp_handler);
 
-  int i;
-  for(i=0; i < 8; i++) {
-    op->outs[i] = outlet_new((t_object *) op, &s_bang);
-  }
+  op->out = outlet_new((t_object *) op, &s_float);
 
   op->key_count = 0;
   op->mode = 0;
@@ -92,6 +89,7 @@ void *mp_new(t_symbol *s, int argc, t_atom *argv) {
   op->edit_row = op->key_count = op->mode = op->prev_mode = 0;
 
   op->size = net_monome_size_x();
+  op->XSIZE = net_monome_size_x();
   op->dummy = 0;
 
   s8 positions_init[8] = {3,1,2,2,3,3,5,7};
@@ -151,7 +149,7 @@ static void op_mp_in_step(op_mp_t* op, float f) {
 
     // send out
     if(op->triggers[i]) {
-      outlet_bang(op->outs[i]);
+      outlet_float(op->out, (float)i);
     }
   }
 

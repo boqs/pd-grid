@@ -11,14 +11,9 @@ typedef struct op_step_struct {
   // inputs: size, step
   volatile io_t size, step;
   // outputs: a,b,c,d
-  t_outlet *a;
-  t_outlet *b;
-  t_outlet *c;
-  t_outlet *d;
-  t_outlet *mono1;
-  t_outlet *pos1;
-  t_outlet *mono2;
-  t_outlet *pos2;
+  t_outlet *tr;
+  t_outlet *mono;
+  t_outlet *pos;
   // internal:
   s8 s_start, s_end, s_length, s_now, s_cut;
   s8 s_start2, s_end2, s_length2, s_now2, s_cut2;

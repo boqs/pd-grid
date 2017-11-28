@@ -4,9 +4,9 @@ lib.name = grid
 
 class.sources = grid.c\
 	step.c \
-	ww.c \
+	whitewhale.c \
 	kria.c \
-	mp.c
+	meadowphysics.c
 
 PDINCLUDEDIR=/usr/local/include/pd
 
