@@ -4,6 +4,8 @@
 static void monome_server_error(int num, const char *m, const char *path);
 static int monome_key_handler(const char *path, const char *types, lo_arg ** argv,
 			      int argc, void *data, void *user_data);
+static int monome_port_handler(const char *path, const char *types, lo_arg ** argv,
+			       int argc, void *data, void *user_data);
 static int monome_devlist_handler(const char *path, const char *types, lo_arg ** argv,
 				  int argc, void *data, void *user_data);
 static int monome_size_handler(const char *path, const char *types, lo_arg ** argv,
@@ -26,6 +28,7 @@ t_monome* monomeOpFocus = NULL;
 static lo_address monome_dev_address;
 
 static lo_server monome_server;
+static bool pdHasFocus = true;
 
 void net_monome_setup (void) {
   if(monome_server == NULL) {
@@ -39,6 +42,8 @@ void net_monome_setup (void) {
 			 monome_devlist_handler, NULL);
     lo_server_add_method(monome_server, "/sys/size", "ii",
 			 monome_size_handler, NULL);
+    lo_server_add_method(monome_server, "/sys/port", "i",
+			 monome_port_handler, NULL);
     lo_address a = lo_address_new(NULL, "12002");
 
     lo_send(a, "/serialosc/list", "si", "localhost", 6001);
@@ -123,7 +128,9 @@ void monome_update_128_grid () {
 void monome_send_quadrant (int x, int y, int *testdata) {
   // XXX hack - this is pretty gross, sorry!  monome quadrant
   // represented in osc by 66 ints - x, y & 64 intensities
-  lo_send(monome_dev_address, "/monome/grid/led/level/map", "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", x, y, testdata[0], testdata[1], testdata[2], testdata[3], testdata[4], testdata[5], testdata[6], testdata[7], testdata[8], testdata[9], testdata[10], testdata[11], testdata[12], testdata[13], testdata[14], testdata[15], testdata[16], testdata[17], testdata[18], testdata[19], testdata[20], testdata[21], testdata[22], testdata[23], testdata[24], testdata[25], testdata[26], testdata[27], testdata[28], testdata[29], testdata[30], testdata[31], testdata[32], testdata[33], testdata[34], testdata[35], testdata[36], testdata[37], testdata[38], testdata[39], testdata[40], testdata[41], testdata[42], testdata[43], testdata[44], testdata[45], testdata[46], testdata[47], testdata[48], testdata[49], testdata[50], testdata[51], testdata[52], testdata[53], testdata[54], testdata[55], testdata[56], testdata[57], testdata[58], testdata[59], testdata[60], testdata[61], testdata[62], testdata[63]);
+  if(pdHasFocus) {
+    lo_send(monome_dev_address, "/monome/grid/led/level/map", "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", x, y, testdata[0], testdata[1], testdata[2], testdata[3], testdata[4], testdata[5], testdata[6], testdata[7], testdata[8], testdata[9], testdata[10], testdata[11], testdata[12], testdata[13], testdata[14], testdata[15], testdata[16], testdata[17], testdata[18], testdata[19], testdata[20], testdata[21], testdata[22], testdata[23], testdata[24], testdata[25], testdata[26], testdata[27], testdata[28], testdata[29], testdata[30], testdata[31], testdata[32], testdata[33], testdata[34], testdata[35], testdata[36], testdata[37], testdata[38], testdata[39], testdata[40], testdata[41], testdata[42], testdata[43], testdata[44], testdata[45], testdata[46], testdata[47], testdata[48], testdata[49], testdata[50], testdata[51], testdata[52], testdata[53], testdata[54], testdata[55], testdata[56], testdata[57], testdata[58], testdata[59], testdata[60], testdata[61], testdata[62], testdata[63]);
+  }
 }
 
 void net_monome_set_focus(t_monome* op_monome, u8 focus) {
@@ -187,6 +194,17 @@ int monome_devlist_handler(const char *path, const char *types, lo_arg ** argv,
     monome_dev_address = lo_address_new(NULL, portno);
     lo_send(monome_dev_address, "sys/info", "i", 6001);
     lo_server_recv_noblock(monome_server, 500);
+  }
+  return 1;
+}
+int monome_port_handler(const char *path, const char *types, lo_arg ** argv,
+			   int argc, void *data, void *user_data) {
+  (void) path;
+  (void) types;
+  (void) data;
+  (void) user_data;
+  if(argc >= 1) {
+    pdHasFocus = argv[0]->i == 6001;
   }
   return 1;
 }
