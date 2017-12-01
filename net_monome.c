@@ -42,6 +42,7 @@ void net_monome_setup (void) {
     lo_address a = lo_address_new(NULL, "12002");
 
     lo_send(a, "/serialosc/list", "si", "localhost", 6001);
+    lo_server_recv_noblock(monome_server, 500);
     serial_osc_grab_focus();
     grid_clock = clock_new(NULL, (t_method) grid_tick);
     clock_delay(grid_clock, 10.0);
@@ -185,6 +186,7 @@ int monome_devlist_handler(const char *path, const char *types, lo_arg ** argv,
     sprintf(portno, "%d", argv[2]->i);
     monome_dev_address = lo_address_new(NULL, portno);
     lo_send(monome_dev_address, "sys/info", "i", 6001);
+    lo_server_recv_noblock(monome_server, 500);
   }
   return 1;
 }
