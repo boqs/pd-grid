@@ -1248,4 +1248,5 @@ void op_ww_pickle(op_ww_t* ww, FILE *f) {
 void op_ww_unpickle(op_ww_t* ww, FILE *f) {
   fread(&ww->w, sizeof(ww->x), 1, f);
   fread(&ww->x, sizeof(ww->x), 1, f);
+  op_ww_redraw(&ww->monome);
 }
