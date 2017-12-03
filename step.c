@@ -41,7 +41,8 @@ void *step_new(t_symbol *s, int argc, t_atom *argv) {
   /* op->super.unpickle = (op_unpickle_fn) (&op_step_unpickle); */
 
   //--- monome
-  net_monome_init(&op->monome, (monome_handler_t)op_step_handler);
+  net_monome_init(&op->monome, (monome_handler_t)op_step_handler,
+		  NULL, NULL);
 
   // superclass state
 

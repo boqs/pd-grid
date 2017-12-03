@@ -11,6 +11,10 @@ static void op_ww_poll_handler(void* op);
 /// monome event handler
 static void op_ww_handler(t_monome* op_monome, u8 x, u8 y, u8 z);
 
+// pickles
+void op_ww_pickle(op_ww_t* ww, FILE *f);
+void op_ww_unpickle(op_ww_t* ww, FILE *f);
+
 static void op_ww_redraw(t_monome *op_monome);
 
 static u32 rnd(void);
@@ -95,7 +99,10 @@ void *ww_new(t_symbol *s, int argc, t_atom *argv) {
   op->cv = outlet_new((t_object *) op, &s_list);
   op->pos = outlet_new((t_object *) op, &s_float);
 
-  net_monome_init(&op->monome, (monome_handler_t)&op_ww_handler);
+  net_monome_init(&op->monome,
+		  (monome_handler_t)&op_ww_handler,
+		  (monome_pickle_t)&op_ww_pickle,
+		  (monome_pickle_t)&op_ww_unpickle);
 
   op->clk = 0;
   op->param = 0;
@@ -1232,31 +1239,13 @@ static u32 rnd() {
 }
 
 
-/* // pickle / unpickle */
-/* u8* op_ww_pickle(op_ww_t* mgrid, u8* dst) { */
-/*   dst = pickle_io(mgrid->focus, dst); */
-/*   dst = pickle_io(mgrid->param, dst); */
+// pickle / unpickle
+void op_ww_pickle(op_ww_t* ww, FILE *f) {
+  fwrite(&ww->w, sizeof(ww->x), 1, f);
+  fwrite(&ww->x, sizeof(ww->x), 1, f);
+}
 
-/*   u32 *ww_state = (u32*)&(mgrid->w); */
-/*   while ((u8*)ww_state < (u8*) &(mgrid->x)) { */
-/*     dst = pickle_32(*ww_state, dst); */
-/*     ww_state +=1; */
-/*   } */
-
-/*   return dst; */
-/* } */
-
-/* const u8* op_ww_unpickle(op_ww_t* mgrid, const u8* src) { */
-/*   src = unpickle_io(src, (u32*)&(mgrid->focus)); */
-/*   // FIXME should probably auto-detect grid size here:::: */
-/*   src = unpickle_io(src, (u32*)&(mgrid->param)); */
-/*   u32 *ww_state = (u32*)&(mgrid->w); */
-/*   while ((u8*)ww_state < (u8*) &(mgrid->x)) { */
-/*     src = unpickle_32(src, ww_state); */
-/*     ww_state +=1; */
-/*   } */
-/*   if(mgrid->focus > 0) { */
-/*     net_monome_set_focus( &(mgrid->monome), 1); */
-/*   } */
-/*   return src; */
-/* } */
+void op_ww_unpickle(op_ww_t* ww, FILE *f) {
+  fread(&ww->w, sizeof(ww->x), 1, f);
+  fread(&ww->x, sizeof(ww->x), 1, f);
+}

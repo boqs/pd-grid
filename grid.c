@@ -36,7 +36,8 @@ void *grid_new(t_symbol *s, int argc, t_atom *argv) {
   (void) s;
   t_grid *grid_obj = (t_grid *) pd_new(grid_class);
 
-  net_monome_init(&grid_obj->monome, (monome_handler_t)grid_key_handler);
+  net_monome_init(&grid_obj->monome, (monome_handler_t)grid_key_handler,
+		  NULL, NULL);
   
   grid_obj->button_out = outlet_new((t_object *)grid_obj, &s_float);
 

@@ -78,7 +78,8 @@ void *mp_new(t_symbol *s, int argc, t_atom *argv) {
   (void) argv;
   op_mp_t *op = (op_mp_t *)pd_new(op_mp_class);
 
-  net_monome_init(&op->monome, (monome_handler_t)&op_mp_handler);
+  net_monome_init(&op->monome, (monome_handler_t)&op_mp_handler,
+		  NULL, NULL);
 
   op->out = outlet_new((t_object *) op, &s_float);
 

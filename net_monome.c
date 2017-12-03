@@ -61,12 +61,15 @@ void net_monome_setup (void) {
   }
 }
 
-void net_monome_init (t_monome *m, monome_handler_t h) {
+void net_monome_init (t_monome *m, monome_handler_t h, monome_pickle_t p, monome_pickle_t u) {
   int i;
   for(i=0; i<MONOME_MAX_LED_BYTES; ++i) {
     m->opLedBuffer[i] = 0;
   }
   m->handler = h;
+  m->pickleFn = p;
+  m->unpickleFn = u;
+  m->pickleFilename[0] = 0;
 }
 void net_monome_deinit (t_monome *m) {
   net_monome_set_focus(m, 0);
@@ -94,9 +97,33 @@ void net_monome_unfocus(t_monome *m) {
   serial_osc_grab_focus();
 }
 
+void net_monome_pickle(t_monome *m, t_symbol *s) {
+  FILE *f = fopen(s->s_name, "w");
+  if (f) {
+    if(m->pickleFn) {
+      m->pickleFn(m, f);
+    }
+    fclose(f);
+  }
+}
+
+void net_monome_unpickle(t_monome *m, t_symbol *s) {
+  FILE *f = fopen(s->s_name, "r");
+  if (f) {
+    if(m->unpickleFn) {
+      m->unpickleFn(m, f);
+    }
+    fclose(f);
+  }
+}
+
 void net_monome_add_focus_methods (t_class *op) {
   class_addmethod((t_class *)op, (t_method)net_monome_unfocus, gensym("unfocus"), A_DEFFLOAT, 0);
   class_addmethod((t_class *)op, (t_method)net_monome_focus, gensym("focus"), 0);
+  class_addmethod((t_class *)op, (t_method)net_monome_pickle, gensym("save"),
+		  A_SYMBOL, 0);
+  class_addmethod((t_class *)op, (t_method)net_monome_unpickle, gensym("load"),
+		  A_SYMBOL, 0);
 }
 
 void grid_tick(void *client) {

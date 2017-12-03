@@ -117,7 +117,8 @@ void *kria_new(t_symbol *s, int argc, t_atom *argv) {
   op->voice0 = outlet_new((t_object *) op, &s_list);
   op->voice1 = outlet_new((t_object *) op, &s_list);
 
-  net_monome_init(&op->monome, (monome_handler_t)&op_kria_handler);
+  net_monome_init(&op->monome, (monome_handler_t)&op_kria_handler,
+		  NULL, NULL);
 
   op->clk = 0;
   op->octave = 12;
