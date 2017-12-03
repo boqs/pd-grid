@@ -9,7 +9,7 @@
 typedef struct op_step_struct {
   t_monome monome;
   // inputs: size, step
-  volatile io_t size, step;
+  io_t size, step;
   // outputs: a,b,c,d
   t_outlet *tr;
   t_outlet *mono;

@@ -11,6 +11,9 @@ static void op_kria_poll_handler(void* op);
 /// monome event handler
 static void op_kria_handler(t_monome* op_monome, u8 x, u8 y, u8 z);
 
+// pickles
+static void op_kria_pickle(op_kria_t* kria, FILE* f);
+static void op_kria_unpickle(op_kria_t* kria, FILE* f);
 
 #define L2 12
 #define L1 8
@@ -118,7 +121,8 @@ void *kria_new(t_symbol *s, int argc, t_atom *argv) {
   op->voice1 = outlet_new((t_object *) op, &s_list);
 
   net_monome_init(&op->monome, (monome_handler_t)&op_kria_handler,
-		  NULL, NULL);
+		  (monome_pickle_t)op_kria_pickle,
+		  (monome_pickle_t)op_kria_unpickle);
 
   op->clk = 0;
   op->octave = 12;
@@ -1089,35 +1093,15 @@ static void kria_refresh(t_monome *op_monome) {
 }
 
 /* // pickle / unpickle */
-/* u8* op_kria_pickle(op_kria_t* kria, u8* dst) { */
-/*   dst = pickle_io(kria->focus, dst); */
-/*   dst = pickle_io(kria->octave, dst); */
-/*   dst = pickle_io(kria->tuning, dst); */
+void op_kria_pickle(op_kria_t* kria, FILE *f) {
+  fwrite(&kria->octave, sizeof(s16), 1, f);
+  fwrite(&kria->tuning, sizeof(s16), 1, f);
+  fwrite(&kria->k, sizeof(kria_set), 1, f);
+}
 
-/*   u32 *kria_state = (u32*)&(kria->k); */
-/*   while ((u8*)kria_state < ((u8*) &(kria->k)) + sizeof(kria_set)) { */
-/*     dst = pickle_32(*kria_state, dst); */
-/*     kria_state +=1; */
-/*   } */
-
-/*   return dst; */
-/* } */
-
-/* const u8* op_kria_unpickle(op_kria_t* kria, const u8* src) { */
-/*   src = unpickle_io(src, (u32*)&(kria->focus)); */
-/*   src = unpickle_io(src, (u32*)&(kria->octave)); */
-/*   src = unpickle_io(src, (u32*)&(kria->tuning)); */
-
-/*   u32 *kria_state = (u32*)&(kria->k); */
-/*   while ((u8*)kria_state < ((u8*) &(kria->k)) + sizeof(kria_set)) { */
-/*     src = unpickle_32(src, kria_state); */
-/*     kria_state +=1; */
-/*   } */
-/*   calc_scale(kria, 0); */
-/*   calc_scale(kria, 1); */
-/*   if (kria->focus > 0) { */
-/*     net_monome_set_focus( &(kria->monome), 1); */
-/*   } */
-/*   return src; */
-/* } */
+void op_kria_unpickle(op_kria_t* kria, FILE* f) {
+  fread(&kria->octave, sizeof(s16), 1, f);
+  fread(&kria->tuning, sizeof(s16), 1, f);
+  fread(&kria->k, sizeof(kria_set), 1, f);
+}
 

@@ -18,7 +18,9 @@ static void op_mp_trigger(op_mp_t* op_monome, u8 n);
 
 static u32 rnd(void);
 
-
+// pickles
+static void op_mp_pickle(op_mp_t* mgrid, FILE *f);
+static void op_mp_unpickle(op_mp_t* mgrid, FILE *f);
 
 const u8 glyph[8][8] = {{0,0,0,0,0,0,0,0},         // o
        {0,24,24,126,126,24,24,0},     // +
@@ -79,7 +81,8 @@ void *mp_new(t_symbol *s, int argc, t_atom *argv) {
   op_mp_t *op = (op_mp_t *)pd_new(op_mp_class);
 
   net_monome_init(&op->monome, (monome_handler_t)&op_mp_handler,
-		  NULL, NULL);
+		  (monome_pickle_t)op_mp_pickle,
+		  (monome_pickle_t)op_mp_unpickle);
 
   op->out = outlet_new((t_object *) op, &s_float);
 
@@ -352,30 +355,29 @@ static u32 rnd() {
 
 
 
-/* // pickle / unpickle */
-/* u8* op_mp_pickle(op_mp_t* mgrid, u8* dst) { */
-/*   dst = pickle_io(mgrid->focus, dst); */
-/*   dst = pickle_io(mgrid->size, dst); */
-/*   u32 *mp_state = (u32*)mgrid->positions; */
-/*   while ((u8*)mp_state < (u8*) &(mgrid->edit_row)) { */
-/*     dst = pickle_32(*mp_state, dst); */
-/*     mp_state +=1; */
-/*   } */
-/*   /// no state...??? */
-/*   return dst; */
-/* } */
+// pickle / unpickle
+void op_mp_pickle(op_mp_t* mgrid, FILE *f) {
+  fwrite(&mgrid->size, sizeof(mgrid->size), 1, f);
+  fwrite(mgrid->positions, sizeof(s8), 8, f);
+  fwrite(mgrid->points, sizeof(s8), 8, f);
+  fwrite(mgrid->points_save, sizeof(s8), 8, f);
+  fwrite(mgrid->triggers, sizeof(u8), 8, f);
+  fwrite(mgrid->trig_dests, sizeof(u8), 8, f);
+  fwrite(mgrid->rules, sizeof(u8), 8, f);
+  fwrite(mgrid->rule_dests, sizeof(u8), 8, f);
 
-/* const u8* op_mp_unpickle(op_mp_t* mgrid, const u8* src) { */
-/*   src = unpickle_io(src, (u32*)&(mgrid->focus)); */
-/*   // FIXME should probably auto-detect grid size here:::: */
-/*   src = unpickle_io(src, (u32*)&(mgrid->size)); */
-/*   u32 *mp_state = (u32*)mgrid->positions; */
-/*   while ((u8*)mp_state < (u8*) &(mgrid->edit_row)) { */
-/*     src = unpickle_32(src, mp_state); */
-/*     mp_state +=1; */
-/*   } */
-/*   if(mgrid->focus > 0) { */
-/*     net_monome_set_focus( &(mgrid->monome), 1); */
-/*   } */
-/*   return src; */
-/* } */
+  fwrite(&mgrid->XSIZE, sizeof(u8), 1, f);
+}
+
+void op_mp_unpickle(op_mp_t* mgrid, FILE *f) {
+  fread(&mgrid->size, sizeof(mgrid->size), 1, f);
+  fread(mgrid->positions, sizeof(s8), 8, f);
+  fread(mgrid->points, sizeof(s8), 8, f);
+  fread(mgrid->points_save, sizeof(s8), 8, f);
+  fread(mgrid->triggers, sizeof(u8), 8, f);
+  fread(mgrid->trig_dests, sizeof(u8), 8, f);
+  fread(mgrid->rules, sizeof(u8), 8, f);
+  fread(mgrid->rule_dests, sizeof(u8), 8, f);
+
+  fread(&mgrid->XSIZE, sizeof(u8), 1, f);
+}

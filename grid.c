@@ -6,7 +6,8 @@ typedef struct _grid {
 } t_grid;
 
 static t_class *grid_class;
-
+static void grid_unpickle(t_grid* g, FILE *f);
+static void grid_pickle(t_grid* g, FILE *f);
 
 static void grid_led(t_grid *op, t_floatarg x, t_floatarg y, t_floatarg z)  {
   int z_16 = (int) z;
@@ -37,7 +38,7 @@ void *grid_new(t_symbol *s, int argc, t_atom *argv) {
   t_grid *grid_obj = (t_grid *) pd_new(grid_class);
 
   net_monome_init(&grid_obj->monome, (monome_handler_t)grid_key_handler,
-		  NULL, NULL);
+		  (monome_pickle_t)grid_pickle, (monome_pickle_t)grid_unpickle);
   
   grid_obj->button_out = outlet_new((t_object *)grid_obj, &s_float);
 
@@ -63,3 +64,11 @@ static void grid_free(void* op) {
 }
 
 
+// pickle / unpickle
+void grid_pickle(t_grid *g, FILE *f) {
+  fwrite(g->monome.opLedBuffer, sizeof(u8), MONOME_MAX_LED_BYTES, f);
+}
+
+void grid_unpickle(t_grid *g, FILE *f) {
+  fread(g->monome.opLedBuffer, sizeof(u8), MONOME_MAX_LED_BYTES, f);
+}

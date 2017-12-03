@@ -5,6 +5,10 @@ static void op_step_in_step(op_step_t* op, float v);
 static void op_step_in_bang(op_step_t* op);
 static void op_step_in_size(op_step_t* op, float v);
 
+// pickles
+void op_step_pickle(op_step_t* mgrid, FILE *f);
+void op_step_unpickle(op_step_t* mgrid, FILE *f);
+
 static t_class *op_step_class;
 void *step_new(t_symbol *s, int argc, t_atom *argv);
 void step_free(void* op);
@@ -42,7 +46,8 @@ void *step_new(t_symbol *s, int argc, t_atom *argv) {
 
   //--- monome
   net_monome_init(&op->monome, (monome_handler_t)op_step_handler,
-		  NULL, NULL);
+		  (monome_pickle_t)&op_step_pickle,
+		  (monome_pickle_t)&op_step_unpickle);
 
   // superclass state
 
@@ -272,40 +277,38 @@ static void op_step_handler(op_step_t *op, u8 x, u8 y, u8 z) {
 
 
 /* // pickle / unpickle */
-/* u8* op_step_pickle(op_step_t* mgrid, u8* dst) { */
-/*   dst = pickle_io(mgrid->focus, dst); */
-/*   dst = pickle_io(mgrid->size, dst); */
-/*   u32 *step_state = (u32*)&mgrid->s_start; */
-/*   while ((u8*)step_state <= (u8*) &(mgrid->steps[3][15])) { */
-/*     dst = pickle_32(*step_state, dst); */
-/*     step_state +=1; */
-/*   } */
-/*   int i; */
-/*   for (i=0; i < 256; i++) { */
-/*     *dst = mgrid->monome.opLedBuffer[i]; */
-/*     dst++; */
-/*   } */
+void op_step_pickle(op_step_t* mgrid, FILE *f) {
+  fwrite(&mgrid->size, sizeof(mgrid->size), 1, f);
+  fwrite(&mgrid->step, sizeof(mgrid->size), 1, f);
+  fwrite(&mgrid->s_start, sizeof(s8), 1, f);
+  fwrite(&mgrid->s_end, sizeof(s8), 1, f);
+  fwrite(&mgrid->s_length, sizeof(s8), 1, f);
+  fwrite(&mgrid->s_now, sizeof(s8), 1, f);
+  fwrite(&mgrid->s_cut, sizeof(s8), 1, f);
+  fwrite(&mgrid->s_start2, sizeof(s8), 1, f);
+  fwrite(&mgrid->s_end2, sizeof(s8), 1, f);
+  fwrite(&mgrid->s_length2, sizeof(s8), 1, f);
+  fwrite(&mgrid->s_now2, sizeof(s8), 1, f);
+  fwrite(&mgrid->s_cut2, sizeof(s8), 1, f);
+  fwrite(mgrid->steps, sizeof(s8), 4 * 16, f);
 
-/*   /// no state...??? */
-/*   return dst; */
-/* } */
+  fwrite(mgrid->monome.opLedBuffer, sizeof(u8), MONOME_MAX_LED_BYTES, f);
+}
 
-/* const u8* op_step_unpickle(op_step_t* mgrid, const u8* src) { */
-/*   src = unpickle_io(src, (u32*)&(mgrid->focus)); */
-/*   src = unpickle_io(src, (u32*)&(mgrid->size)); */
-/*   u32 *step_state = (u32*)&mgrid->s_start; */
-/*   while ((u8*)step_state <= (u8*) &(mgrid->steps[3][15])) { */
-/*     src = unpickle_32(src, step_state); */
-/*     step_state +=1; */
-/*   } */
-/*   int i; */
-/*   for (i=0; i < 256; i++) { */
-/*     mgrid->monome.opLedBuffer[i] = *src; */
-/*     src++; */
-/*   } */
+void op_step_unpickle(op_step_t* mgrid, FILE *f) {
+  fread(&mgrid->size, sizeof(mgrid->size), 1, f);
+  fread(&mgrid->step, sizeof(mgrid->size), 1, f);
+  fread(&mgrid->s_start, sizeof(s8), 1, f);
+  fread(&mgrid->s_end, sizeof(s8), 1, f);
+  fread(&mgrid->s_length, sizeof(s8), 1, f);
+  fread(&mgrid->s_now, sizeof(s8), 1, f);
+  fread(&mgrid->s_cut, sizeof(s8), 1, f);
+  fread(&mgrid->s_start2, sizeof(s8), 1, f);
+  fread(&mgrid->s_end2, sizeof(s8), 1, f);
+  fread(&mgrid->s_length2, sizeof(s8), 1, f);
+  fread(&mgrid->s_now2, sizeof(s8), 1, f);
+  fread(&mgrid->s_cut2, sizeof(s8), 1, f);
+  fread(mgrid->steps, sizeof(s8), 4 * 16, f);
 
-/*   if( mgrid->focus > 0) { */
-/*     net_monome_set_focus( &(mgrid->monome), 1); */
-/*   } */
-/*   return src; */
-/* } */
+  fread(mgrid->monome.opLedBuffer, sizeof(u8), MONOME_MAX_LED_BYTES, f);
+}
