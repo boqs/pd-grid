@@ -66,7 +66,7 @@
 #X msg 322 24 stop;
 #X obj 291 53 metro 5;
 #X obj 696 111 send tick;
-#X obj 502 194 receive tick;
+#X obj 461 172 receive tick;
 #X obj 197 171 receive tick;
 #X obj 992 86 receive tick;
 #X obj 991 236 print mono1;
@@ -93,6 +93,7 @@
 0 1;
 #X msg 1081 487 focus;
 #X obj 1158 446 * 15;
+#X obj 533 126 loadbang;
 #X connect 0 0 47 0;
 #X connect 1 0 2 0;
 #X connect 1 0 3 0;
@@ -180,3 +181,4 @@
 #X connect 83 0 85 0;
 #X connect 84 0 81 0;
 #X connect 85 0 82 0;
+#X connect 86 0 0 0;

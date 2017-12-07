@@ -25,15 +25,13 @@ static int grid_size_y = 8;
 u8 defaultLedBuffer[MONOME_MAX_LED_BYTES];
 u8 *monomeLedBuffer = defaultLedBuffer;
 t_monome* monomeOpFocus = NULL;
-static lo_address monome_dev_address;
+static lo_address monome_dev_address = NULL;
 
 static lo_server monome_server;
 static bool pdHasFocus = true;
 
 void net_monome_setup (void) {
   if(monome_server == NULL) {
-    monome_dev_address = lo_address_new(NULL, "13189");
-
     monome_server = lo_server_new("6001", monome_server_error);
 
     lo_server_add_method(monome_server, "/monome/grid/key", "iii",
@@ -47,8 +45,6 @@ void net_monome_setup (void) {
     lo_address a = lo_address_new(NULL, "12002");
 
     lo_send(a, "/serialosc/list", "si", "localhost", 6001);
-    lo_server_recv_noblock(monome_server, 500);
-    serial_osc_grab_focus();
     grid_clock = clock_new(NULL, (t_method) grid_tick);
     clock_delay(grid_clock, 10.0);
 
@@ -84,7 +80,13 @@ u8 net_monome_xy_idx(u8 x, u8 y) {
   return 16 * y + x;
 }
 static void serial_osc_grab_focus(void) {
-  lo_send(monome_dev_address, "/sys/port", "i", 6001);
+  if(monome_dev_address == NULL) {
+    lo_address a = lo_address_new(NULL, "12002");
+    lo_send(a, "/serialosc/list", "si", "localhost", 6001);
+
+  } else {
+    lo_send(monome_dev_address, "/sys/port", "i", 6001);
+  }
 }
 
 void net_monome_focus(t_monome *m)  {
@@ -155,7 +157,7 @@ void monome_update_128_grid () {
 void monome_send_quadrant (int x, int y, int *testdata) {
   // XXX hack - this is pretty gross, sorry!  monome quadrant
   // represented in osc by 66 ints - x, y & 64 intensities
-  if(pdHasFocus) {
+  if(pdHasFocus && monome_dev_address != NULL) {
     lo_send(monome_dev_address, "/monome/grid/led/level/map", "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", x, y, testdata[0], testdata[1], testdata[2], testdata[3], testdata[4], testdata[5], testdata[6], testdata[7], testdata[8], testdata[9], testdata[10], testdata[11], testdata[12], testdata[13], testdata[14], testdata[15], testdata[16], testdata[17], testdata[18], testdata[19], testdata[20], testdata[21], testdata[22], testdata[23], testdata[24], testdata[25], testdata[26], testdata[27], testdata[28], testdata[29], testdata[30], testdata[31], testdata[32], testdata[33], testdata[34], testdata[35], testdata[36], testdata[37], testdata[38], testdata[39], testdata[40], testdata[41], testdata[42], testdata[43], testdata[44], testdata[45], testdata[46], testdata[47], testdata[48], testdata[49], testdata[50], testdata[51], testdata[52], testdata[53], testdata[54], testdata[55], testdata[56], testdata[57], testdata[58], testdata[59], testdata[60], testdata[61], testdata[62], testdata[63]);
   }
 }
@@ -206,6 +208,7 @@ int monome_size_handler(const char *path, const char *types, lo_arg ** argv,
     grid_size_x = argv[0]->i;
     grid_size_y = argv[1]->i;
   }
+  serial_osc_grab_focus();
   return 1;
 }
 
@@ -220,7 +223,6 @@ int monome_devlist_handler(const char *path, const char *types, lo_arg ** argv,
     sprintf(portno, "%d", argv[2]->i);
     monome_dev_address = lo_address_new(NULL, portno);
     lo_send(monome_dev_address, "sys/info", "i", 6001);
-    lo_server_recv_noblock(monome_server, 500);
   }
   return 1;
 }
